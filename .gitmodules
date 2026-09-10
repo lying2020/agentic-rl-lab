@@ -1,0 +1,46 @@
+[submodule "algorithm/fsdp_qlora"]
+	path = algorithm/fsdp_qlora
+	url = https://github.com/AnswerDotAI/fsdp_qlora.git
+[submodule "algorithm/OPSD"]
+	path = algorithm/OPSD
+	url = https://github.com/siyan-zhao/OPSD.git
+[submodule "algorithm/Rethinking-OPD"]
+	path = algorithm/Rethinking-OPD
+	url = https://github.com/lying2020/Rethinking-OPD.git
+[submodule "algorithm/Tiny-FSDP"]
+	path = algorithm/Tiny-FSDP
+	url = https://github.com/liangyuwang/Tiny-FSDP.git
+[submodule "algorithm/verl"]
+	path = algorithm/verl
+	url = https://github.com/verl-project/verl.git
+[submodule "algorithm/vllm"]
+	path = algorithm/vllm
+	url = https://github.com/lying2020/vllm.git
+[submodule "algorithm/LlamaFactory"]
+	path = algorithm/LlamaFactory
+	url = https://github.com/lying2020/LlamaFactory.git
+[submodule "algorithm/llama.cpp"]
+	path = algorithm/llama.cpp
+	url = https://github.com/lying2020/llama.cpp.git
+[submodule "AI4Job/AI_pua"]
+	path = AI4Job/AI_pua
+	url = https://github.com/lying2020/AI_pua.git
+[submodule "AI4Job/CV"]
+	path = AI4Job/CV
+	url = https://github.com/lying2020/CV.git
+[submodule "AI4Job/Job_For_AIInfra_and_Inference_and_PostTraining"]
+	path = AI4Job/Job_For_AIInfra_and_Inference_and_PostTraining
+	url = https://github.com/lying2020/Job_For_AIInfra_and_Inference_and_PostTraining.git
+[submodule "AI4Job/llm-action"]
+	path = AI4Job/llm-action
+	url = https://github.com/lying2020/llm-action.git
+[submodule "AI4Job/LLMForEverybody"]
+	path = AI4Job/LLMForEverybody
+	url = https://github.com/lying2020/LLMForEverybody.git
+[submodule "AI4Job/AIInfra"]
+	path = AI4Job/AIInfra
+	url = https://github.com/lying2020/AIInfra.git
+	shallow = true
+[submodule "tools/SwanLab-Skill"]
+	path = tools/SwanLab-Skill
+	url = https://github.com/SwanHubX/SwanLab-Skill.git
