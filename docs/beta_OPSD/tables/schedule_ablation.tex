@@ -1,0 +1,41 @@
+\begin{table}[t]
+\centering
+\small
+\caption{
+Effect of interpolation schedules. The notation $a\rightarrow b$ indicates that the teacher-weight endpoints $w_{\mathrm{start}}=a$ and $w_{\mathrm{end}}=b$ are using the schedule in Eq~\ref{eq:exp_weight_schedule}. We report avg@12 (\%).
+}
+\label{tab:interpolation_schedule_ablation}
+\begin{tabular}{lccc}
+\toprule
+Schedule
+& AIME 2024
+& AIME 2025
+& HMMT 2025 \\
+\midrule
+Fixed $0.5$
+& 50.56
+& 38.33
+& \textbf{16.67} \\
+
+Linear $0.2\rightarrow0.8$
+& 51.39
+& 37.50
+& 16.39 \\
+
+Linear $0.8\rightarrow0.2$
+& 51.94
+& 38.06
+& 15.83 \\
+
+Linear $0.5\rightarrow0.8$
+& 53.33
+& \textbf{40.83}
+& 16.11 \\
+
+Linear $0.8\rightarrow0.5$
+& \textbf{54.72}
+& 38.61
+& 15.83 \\
+\bottomrule
+\end{tabular}
+\end{table}

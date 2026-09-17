@@ -1,0 +1,26 @@
+\begin{table}[t]
+\centering
+\small
+\caption{
+Effect of the distillation target. Both variants use the same return-to-go
+estimator. We report avg@12 (\%); the best result in each column is bolded. For the \ours{} target, we report the result with $w_{\mathrm{start}}=0.5$ and $w_{\mathrm{end}}=0.8$.
+}
+\label{tab:logit_interpolant_ablation}
+\begin{tabular}{lccc}
+\toprule
+Method
+& AIME 2024
+& AIME 2025
+& HMMT 2025 \\
+\midrule
+Teacher + Return-to-go
+& 47.30
+& 35.53
+& 14.44 \\
+\textbf{\oursbold{} target}
+& \textbf{53.33}
+& \textbf{40.83}
+& \textbf{16.11} \\
+\bottomrule
+\end{tabular}
+\end{table}

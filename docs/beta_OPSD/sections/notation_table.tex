@@ -1,0 +1,62 @@
+\begin{table}[hbt]
+\centering
+\small
+\caption{
+Summary of notation. For readability, we omit conditioning variables such as $(x,c)$
+when they are clear from context. Throughout the paper, $\pi_\theta$ denotes the student
+policy, $\pi_{\mathrm{ref}}$ denotes the reference policy, and $p_T$ denotes the privileged
+teacher.
+}
+\label{tab:notation}
+\begin{tabular}{p{0.28\linewidth}p{0.66\linewidth}}
+\toprule
+\textbf{Notation} & \textbf{Description} \\
+\midrule
+
+$x$ & Input prompt. \\
+$c$ & Privileged context available only during training. \\
+$y=(y_1,\ldots,y_T)$ & Generated reasoning trajectory. \\
+$y_t$ & Token at decoding step $t$. \\
+$y_{<t}$ & Prefix before token $t$. \\
+$h_t=(x,y_{<t})$ & Decoding history or prefix state at step $t$. \\
+
+\midrule
+
+$\pi_\theta(y\mid x)$ & Student policy parameterized by $\theta$. \\
+$p_T(y\mid x,c)$ & Privileged teacher policy conditioned on prompt $x$ and context $c$. \\
+$\pi_{\mathrm{ref}}(y\mid x)$ & Reference policy, e.g., the initial student or a stop-gradient copy. \\
+$\bar{\theta}$ & Stop-gradient copy of the current student parameters. \\
+
+\midrule
+
+$R(y;x,c)$ & Trajectory-level reward in the KL-regularized RL formulation. \\
+$\mathcal{J}_{\beta}(\theta)$ & $\beta$-OPSD objective, obtained by using the teacher-to-reference log-ratio reward. \\
+$\beta$ & KL regularization coefficient in $\beta$-OPSD. \\
+$\beta_k$ & Regularization coefficient used at training step $k$. \\
+$\pi_{\beta}^{\star}(y\mid x,c)$ & Closed-form optimal policy of the $\beta$-OPSD objective. \\
+
+
+\midrule
+
+$z_{\mathrm{ref}}(\cdot\mid h_t)$ & Reference/student logits at prefix $h_t$. \\
+$z_T(\cdot\mid h_t,c)$ & Privileged teacher logits at prefix $h_t$. \\
+$\tilde p_{\beta_k}(\cdot\mid h_t,c)$ & Local logit-interpolant target at step $k$. \\
+$\tilde p_{\beta_k}(y\mid x,c)$ & Autoregressive sequence-level logit-interpolant target. \\
+$s_k=\frac{k}{K-1}$ & Normalized training progress. \\
+$w_{k}$ & Implementation notation for the teacher weight. \\
+
+\midrule
+
+$\rho_t^{\beta_k}(y)$ & Token-level log-ratio between the student and interpolant target. \\
+$G_{t,\gamma}^{\beta_k}(y)$ & Discounted return-to-go from token $t$ using future interpolant log-ratios. \\
+$\gamma$ & Discount factor for the return-to-go. \\
+$\operatorname{sg}(\cdot)$ & Stop-gradient operator. \\
+
+\midrule
+
+$D_{\mathrm{KL}}(\cdot\|\cdot)$ & Kullback--Leibler divergence. \\
+$\mathbb{E}_{y\sim\pi_\theta}$ & Expectation over trajectories sampled from the student policy. \\
+
+\bottomrule
+\end{tabular}
+\end{table}

@@ -1,0 +1,223 @@
+\begin{table*}[htb]
+\centering
+\scriptsize
+\caption{
+Mixed student--teacher sampling results. All non-baseline variants use
+Sampling from Logit Interpolants with discount factor $\gamma=0.99$ and
+importance sampling (IS). Here, $\eta$ denotes the teacher weight in the
+proposal distribution. We report pass@12 and avg@12 in percentage points.
+}
+\label{tab:mixed_sampling_results}
+\setlength{\tabcolsep}{4pt}
+\renewcommand{\arraystretch}{1.06}
+
+\begin{tabular}{lccccccc}
+\toprule
+Proposal schedule
+& Step
+& \multicolumn{2}{c}{AIME 2024}
+& \multicolumn{2}{c}{AIME 2025}
+& \multicolumn{2}{c}{HMMT 2025} \\
+\cmidrule(lr){3-4}
+\cmidrule(lr){5-6}
+\cmidrule(lr){7-8}
+&
+& pass@12
+& avg@12
+& pass@12
+& avg@12
+& pass@12
+& avg@12 \\
+\midrule
+
+Vanilla OPSD
+& 200
+& 76.67
+& 46.11
+& 63.33
+& 35.56
+& 43.33
+& 15.83 \\
+
+\midrule
+\multicolumn{8}{l}{\textit{Fixed proposal: $\eta=0.2$}} \\
+\quad Mixed Sampling
+& 50
+& 76.67
+& 50.83
+& 60.00
+& 37.50
+& 40.00
+& 15.83 \\
+\quad Mixed Sampling
+& 75
+& 80.00
+& 50.00
+& 66.67
+& 38.06
+& 40.00
+& 14.44 \\
+\quad Mixed Sampling
+& 100
+& 76.67
+& 52.78
+& 53.33
+& 35.83
+& 33.33
+& 13.61 \\
+\quad Mixed Sampling
+& 200
+& 73.33
+& 51.94
+& 63.33
+& 37.22
+& 43.33
+& 16.11 \\
+
+\midrule
+\multicolumn{8}{l}{\textit{Fixed proposal: $\eta=0.5$}} \\
+\quad Mixed Sampling
+& 50
+& 80.00
+& 50.83
+& 66.67
+& 36.39
+& 43.33
+& 16.11 \\
+\quad Mixed Sampling
+& 75
+& 80.00
+& 52.22
+& 66.67
+& 37.78
+& 46.67
+& 16.11 \\
+\quad Mixed Sampling
+& 100
+& 76.67
+& \textbf{54.17}
+& 63.33
+& 39.44
+& 46.67
+& 17.22 \\
+\quad Mixed Sampling
+& 200
+& 76.67
+& 53.33
+& 63.33
+& 38.06
+& 36.67
+& 15.83 \\
+
+\midrule
+\multicolumn{8}{l}{\textit{Fixed proposal: $\eta=0.8$}} \\
+\quad Mixed Sampling
+& 50
+& 80.00
+& 50.83
+& 60.00
+& 36.94
+& 43.33
+& 15.83 \\
+\quad Mixed Sampling
+& 75
+& 80.00
+& 51.39
+& 70.00
+& \textbf{41.11}
+& 46.67
+& 16.11 \\
+\quad Mixed Sampling
+& 100
+& 73.33
+& 51.94
+& 60.00
+& 36.11
+& 40.00
+& 15.83 \\
+\quad Mixed Sampling
+& 200
+& 73.33
+& 51.39
+& 66.67
+& 38.61
+& 36.67
+& 13.89 \\
+
+\midrule
+\multicolumn{8}{l}{
+\textit{Linear proposal schedule: $\eta:0.2\rightarrow0.8$}
+} \\
+\quad Mixed Sampling
+& 50
+& 80.00
+& 50.83
+& 70.00
+& 38.06
+& 36.67
+& 13.61 \\
+\quad Mixed Sampling
+& 75
+& 76.67
+& 50.56
+& 70.00
+& 36.39
+& \textbf{53.33}
+& 18.06 \\
+\quad Mixed Sampling
+& 100
+& 73.33
+& 51.94
+& 66.67
+& 36.67
+& 36.67
+& 16.39 \\
+\quad Mixed Sampling
+& 200
+& 76.67
+& 50.56
+& 60.00
+& \textbf{41.11}
+& 43.33
+& 16.94 \\
+
+\midrule
+\multicolumn{8}{l}{
+\textit{Linear proposal schedule: $\eta:0.8\rightarrow0.2$}
+} \\
+\quad Mixed Sampling
+& 50
+& 76.67
+& 50.56
+& \textbf{76.67}
+& 36.39
+& 30.00
+& 13.61 \\
+\quad Mixed Sampling
+& 75
+& 73.33
+& 47.78
+& 73.33
+& 36.39
+& 50.00
+& \textbf{18.89} \\
+\quad Mixed Sampling
+& 100
+& 80.00
+& 50.56
+& 60.00
+& 38.61
+& 36.67
+& 15.83 \\
+\quad Mixed Sampling
+& 200
+& 76.67
+& 52.78
+& 60.00
+& 39.72
+& 36.67
+& 15.56 \\
+
+\bottomrule
+\end{tabular}
+\end{table*}

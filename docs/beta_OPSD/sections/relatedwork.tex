@@ -1,0 +1,57 @@
+\section{Related Work}
+\label{sec:related_work}
+
+The method above connects two themes that are often treated separately: how to choose a stable teacher target, and how to assign credit along an on-policy trajectory. We organize related work around this split. Prior work provides ingredients for smoother supervision, reference-regularized policy optimization, and return-based credit assignment; \ours{} combines these ingredients into a single distillation procedure.
+
+\paragraph{On-policy distillation and self-distillation.} On-policy distillation trains the student on its own generated trajectories, using dense
+teacher feedback at each token. This avoids the exposure-bias mismatch of purely offline
+distillation, but introduces a new challenge: the teacher must provide reliable supervision
+on student-generated prefixes, which may be outside the teacher's typical distribution \citep{li2026rethinking, jang2026stable}.
+Recent self-distillation methods further instantiate the teacher as the same model with
+access to privileged information, such as ground-truth solutions or feedback \citep{zhao2026self, liu2026self, yang2026self, shen2026anti, zhang2026opsdl, hubotter2026reinforcement, he2026self}. \ours{} belongs to this line of work, but differs by replacing the fixed teacher target with a scheduled
+student--teacher interpolant and by correcting the myopic local token-KL gradient with a
+Look-Ahead return.
+
+\paragraph{RLHF and reference-regularized policy optimization.}
+Our theoretical formulation is closely related to KL-regularized reinforcement learning and
+RLHF, where a policy is optimized to maximize reward while staying close to a reference
+model \citep{ziegler2019fine, ouyang2022training, schulman2017proximal}. DPO shows that the optimal policy of
+a KL-regularized preference objective can be written in closed form, revealing a direct
+connection between rewards, reference policies, and optimal distributions. We use a similar
+perspective to reinterpret on-policy distillation: the teacher-to-reference log-probability
+ratio acts as a reward, and standard OPD is recovered as the $\beta=1$ special case. This
+view leads directly to the geometric interpolant between the reference student and the
+privileged teacher.
+
+\paragraph{Interpolation, curricula, and teacher-guided learning.}
+Curriculum learning aims to make optimization smoother by gradually changing the
+difficulty or source of supervision \citep{bengio2009curriculum}. Related ideas also
+appear in sequence prediction and imitation learning: scheduled sampling gradually moves
+training from teacher-forced inputs toward model-generated inputs
+\citep{bengio2015scheduled}, while DAgger addresses distribution shift by querying expert
+supervision on learner-induced states \citep{ross2011reduction}. More recent work has
+explored student--teacher mixture reformulations to bridge the distributional gap in
+distillation \citep{jang2026stable}, as well as teacher-guided or
+student--teacher cooperative sampling for improving training rollouts
+\citep{xu2025speculative,shenfeld2023tgrl}. Our logit-interpolant target can be viewed as
+a distributional curriculum: early targets remain close to the student, while later targets
+move toward the privileged teacher. Unlike heuristic interpolation or guidance used only
+for sampling, our interpolant is derived as the optimal policy of a reference-regularized
+distillation objective. This provides a principled target path from student to teacher and,
+when combined with return-to-go credit assignment, yields a stable and future-aware
+on-policy distillation algorithm.
+
+\paragraph{Policy gradients and credit assignment.}
+The return-to-go estimator used in $\beta$-OPSD is closely related to classical policy-gradient methods such as
+REINFORCE \citep{williams1992simple}, where unbiased gradient estimation assigns each action its
+return-to-go rather than only its instantaneous reward. In OPD, the analogous per-step
+signal is the teacher--student log-ratio along a generated trajectory. Prior work has explored
+using local token-level signals for stable distillation \citep{li2026rethinking, armandpour2026unmasking, shen2026anti, jang2026stable, kim2026does}, and related derivations have
+also identified unbiased sequence-level gradient estimators for reverse-KL objectives
+\citep{agrawal2026reinforcement, liu2026self}. Future-aware credit assignment has also been studied in GRPO-style optimization
+\citep{schulman2015high, sutton1998reinforcement}. Our work builds on this perspective and shows that, for on-policy distillation, the
+standard local token-KL update is myopic because it ignores the future distributional
+mismatch induced by earlier tokens. \ours{} applies return-to-go credit assignment directly
+to teacher-guided distillation: the exact undiscounted Look-Ahead estimator recovers an
+unbiased sequence-level KL gradient under student on-policy sampling, while discounted
+implementations provide a practical stability--variance trade-off for long generations.

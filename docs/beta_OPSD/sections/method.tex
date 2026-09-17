@@ -1,0 +1,367 @@
+\section{Method}
+\label{sec:method}
+
+This section develops \ours{} following the paper's central principle: derive the target
+with policy optimization, then train it with self-distillation. We first show that vanilla OPSD
+is precisely the $\beta=1$ member of a broader KL-regularized policy-optimization family,
+making the strength of reference regularization explicit and controllable. We then derive the
+family's optimal policy as a geometric interpolation between the reference policy and the
+privileged teacher. Because direct RL optimization is costly and the exact sequence-level
+target is intractable, we return to efficient distillation by realizing the target through
+scheduled token-level logit interpolation. Finally, we derive return-to-go credit assignment
+to align the practical token-level update with the underlying sequence-level objective.
+Appendix~\ref{app:notation} provides a consolidated reference for the notation used
+throughout the paper.
+
+\subsection{Vanilla OPSD as \texorpdfstring{$\beta=1$}{beta=1} Policy Optimization}
+\label{sec:beta_opsd}
+
+Let $\pi_\theta(y\mid x)$ denote the student policy, $p_T(y\mid x,c)$ the privileged teacher,
+and $\pi_{\mathrm{ref}}(y\mid x)$ a reference policy, such as the initial student or a
+stop-gradient copy of the current student. We start from the standard KL-regularized RL
+objective
+\begin{equation}
+    \max_{\theta}
+    \;
+    \mathbb{E}_{y\sim\pi_\theta(\cdot\mid x)}
+    \left[
+    R(y;x,c)
+    \right]
+    -
+    \beta
+    D_{\mathrm{KL}}
+    \left(
+    \pi_\theta(\cdot\mid x)
+    \,\middle\|\,
+    \pi_{\mathrm{ref}}(\cdot\mid x)
+    \right),
+    \label{eq:kl_regularized_rl}
+\end{equation}
+where $\beta>0$ controls how strongly the learned policy is constrained to remain close to
+the reference.
+
+To embed standard on-policy self-distillation within this policy-optimization family, we
+choose the reward to be the teacher-to-reference log-ratio:
+\begin{equation}
+    R(y;x,c)
+    =
+    \log
+    \frac{
+    p_T(y\mid x,c)
+    }{
+    \pi_{\mathrm{ref}}(y\mid x)
+    }.
+    \label{eq:teacher_log_ratio_reward}
+\end{equation}
+
+This reward is high when a trajectory is more likely under the privileged teacher than under
+the reference policy. Substituting Eq.~\ref{eq:teacher_log_ratio_reward} into
+Eq.~\ref{eq:kl_regularized_rl} gives the family
+\begin{equation}
+    \mathcal{J}_{\beta}(\theta)
+    =
+    \mathbb{E}_{y\sim\pi_\theta(\cdot\mid x)}
+    \left[
+    \log
+    \frac{
+    p_T(y\mid x,c)
+    }{
+    \pi_{\mathrm{ref}}(y\mid x)
+    }
+    \right]
+    -
+    \beta
+    D_{\mathrm{KL}}
+    \left(
+    \pi_\theta(\cdot\mid x)
+    \,\middle\|\,
+    \pi_{\mathrm{ref}}(\cdot\mid x)
+    \right).
+    \label{eq:beta_opsd_objective}
+\end{equation}
+We call this objective \emph{$\beta$-OPSD}. It generalizes standard on-policy
+self-distillation by treating $\beta$ as a variable regularization parameter rather than
+implicitly fixing it at one.
+The log-ratio reward favors trajectories preferred by the privileged teacher over the
+reference policy, while the KL term penalizes movement away from the reference; $\beta$
+controls the trade-off between these two forces.
+
+\begin{proposition}[OPSD is the $\beta=1$ case]
+\label{prop:opsd_beta_one}
+When $\beta=1$, maximizing Eq.~\ref{eq:beta_opsd_objective} is equivalent to minimizing
+the standard sequence-level reverse KL,
+\begin{equation}
+    D_{\mathrm{KL}}
+    \left(
+    \pi_\theta(\cdot\mid x)
+    \,\middle\|\,
+    p_T(\cdot\mid x,c)
+    \right).
+    \label{eq:standard_opsd_kl}
+\end{equation}
+\end{proposition}
+
+At $\beta=1$, the reference-policy terms in the log-ratio reward and KL penalty cancel,
+leaving exactly the negative reverse KL from the student to the privileged teacher. Thus,
+standard OPSD is not separate from policy optimization; it is one member of this
+KL-regularized family. For $\beta>1$, the remaining reference penalty makes the update
+more conservative, while decreasing $\beta$ toward $1$ moves the objective more
+aggressively toward the teacher. The proof is given in Appendix~\ref{app:regularized_rl}.
+
+\subsection{Variable \texorpdfstring{$\beta$}{beta} Defines a Path of Optimal Targets}
+\label{sec:optimal_policy_interpolant}
+
+Once vanilla OPSD is recognized as the $\beta=1$ case, the next question is what target
+each value of $\beta$ defines. For any fixed regularization coefficient, the optimal policy of
+$\beta$-OPSD can be written in closed form.
+
+\begin{proposition}[Optimal policy of $\beta$-OPSD]
+\label{prop:geometric_optimal_policy}
+Assuming compatible support, the maximizer of Eq.~\ref{eq:beta_opsd_objective} is
+\begin{equation}
+    \pi_{\beta}^{\star}(y\mid x,c)
+    =
+    \frac{
+    \pi_{\mathrm{ref}}(y\mid x)^{1-\frac{1}{\beta}}
+    p_T(y\mid x,c)^{\frac{1}{\beta}}
+    }{
+    Z_{\beta}(x,c)
+    },
+    \label{eq:sequence_geometric_mixture}
+\end{equation}
+where $Z_{\beta}(x,c)$ normalizes over full trajectories.
+\end{proposition}
+
+The proof is in Appendix~\ref{app:geometric-optimal-policy}. The solution is a geometric
+interpolation between the reference policy and the privileged teacher. For $\beta\ge 1$, the
+teacher weight $\frac{1}{\beta}$ lies in $[0,1]$: $\beta=1$ recovers the teacher endpoint,
+while $\beta\to\infty$ approaches the reference endpoint. Thus, the teacher is no longer
+the unique target. Each value of $\beta$ selects a different optimal policy along a principled
+reference-to-teacher path.
+
+\paragraph{Scheduling the interpolation.}
+The theory above defines a family of targets for fixed $\beta$. In practice, we exploit this
+new degree of freedom by varying the coefficient over training. We write the coefficient at
+step $k$ as $\beta_k$; its inverse directly determines the teacher weight. We require
+\begin{equation}
+    \frac{1}{\beta_k}\in[0,1],
+    \qquad
+    \text{equivalently } \beta_k\ge 1,
+\end{equation}
+so that the target remains on the path between the reference and the teacher. A larger
+$\frac{1}{\beta_k}$ gives a more teacher-like target, while a smaller
+$\frac{1}{\beta_k}$ keeps the target closer to the reference policy.
+
+In practice, we use a bounded linear schedule for the teacher weight:
+\begin{equation}
+    \frac{1}{\beta_k}
+    =
+    w_{\mathrm{start}}
+    +
+    \left(
+    w_{\mathrm{end}}-w_{\mathrm{start}}
+    \right)
+    \frac{k}{K-1},
+    \qquad
+    k=0,\ldots,K-1.
+    \label{eq:bounded_beta_schedule}
+\end{equation}
+Equivalently,
+\begin{equation}
+    \beta_k
+    =
+    \left[
+    w_{\mathrm{start}}
+    +
+    \left(
+    w_{\mathrm{end}}-w_{\mathrm{start}}
+    \right)
+    \frac{k}{K-1}
+    \right]^{-1}.
+\end{equation}
+When $w_{\mathrm{start}}<w_{\mathrm{end}}$, early targets remain closer to the
+reference policy, while later targets incorporate stronger teacher guidance. This smooth
+curriculum avoids an abrupt projection onto the privileged teacher and provides a direct
+mechanism for reducing the brittleness of vanilla OPSD.
+
+\paragraph{Local logit realization.}
+Although Eq.~\ref{eq:sequence_geometric_mixture} gives the optimal trajectory-level
+distribution, it is not directly usable for language models because the normalizer
+$Z_{\beta}(x,c)$ ranges over all possible completions. We therefore approximate the
+optimal policy locally at each decoding prefix.
+
+Let
+\begin{equation}
+    h_t=(x,y_{<t})
+\end{equation}
+be the prefix at token $t$. Let $z_{\mathrm{ref}}(\cdot\mid h_t)$ denote the reference
+or student-side logits, and let $z_T(\cdot\mid h_t,c)$ denote the privileged teacher logits.
+Given the scheduled coefficient $\beta_k$, we define the local logit-interpolant target as
+\begin{equation}
+    \tilde p_{\beta_k}(\cdot\mid h_t,c)
+    =
+    \operatorname{softmax}
+    \left(
+    \left(1-\frac{1}{\beta_k}\right)
+    z_{\mathrm{ref}}(\cdot\mid h_t)
+    +
+    \frac{1}{\beta_k}
+    z_T(\cdot\mid h_t,c)
+    \right).
+    \label{eq:local_logit_interpolant}
+\end{equation}
+At each prefix, this distribution is exactly the normalized geometric interpolation of the
+local reference and teacher distributions: multiplying probabilities geometrically is
+equivalent, up to normalization, to linearly interpolating their logits.
+
+The resulting autoregressive interpolant target is
+\begin{equation}
+    \tilde p_{\beta_k}(y\mid x,c)
+    =
+    \prod_{t=1}^{T}
+    \tilde p_{\beta_k}(y_t\mid x,y_{<t},c).
+    \label{eq:sequence_logit_interpolant}
+\end{equation}
+Because normalization is applied separately at each prefix, the resulting autoregressive
+distribution is a tractable local approximation to the sequence-level optimum in
+Eq.~\ref{eq:sequence_geometric_mixture}. This is the target used by the practical
+distillation objective below.
+
+\subsection{From Policy Optimization Back to Distillation}
+%\subsection{Policy-Optimal Targets via Efficient Self-Distillation}
+\label{sec:logit_interpolant_distillation}
+
+The $\beta$-OPSD objective in Eq.~\ref{eq:beta_opsd_objective} can in principle be
+optimized with KL-regularized RL algorithms. Doing so, however, would introduce additional
+RL machinery, such as reward-weighted policy updates and advantage estimation, together
+with higher-variance gradients. The analysis above provides a cheaper route: the policy
+objective specifies an optimal sequence-level target, and
+Eq.~\ref{eq:sequence_logit_interpolant} gives its tractable local approximation.
+
+This is the main ``back to distillation'' step. Rather than directly maximizing the RL
+objective, at training step $k$ we train the student to match the RL-derived interpolant
+target $\tilde p_{\beta_k}$ by minimizing
+\begin{equation}
+    \mathcal{L}_{\beta_k}(\theta)
+    =
+    D_{\mathrm{KL}}
+    \left(
+    \pi_\theta(\cdot\mid x)
+    \,\middle\|\,
+    \tilde p_{\beta_k}(\cdot\mid x,c)
+    \right).
+    \label{eq:interpolant_distillation_objective}
+\end{equation}
+Equivalently,
+\begin{equation}
+    \mathcal{L}_{\beta_k}(\theta)
+    =
+    \mathbb{E}_{y\sim\pi_\theta(\cdot\mid x)}
+    \left[
+    \log
+    \frac{
+    \pi_\theta(y\mid x)
+    }{
+    \tilde p_{\beta_k}(y\mid x,c)
+    }
+    \right].
+\end{equation}
+Using the autoregressive factorization in Eq.~\ref{eq:sequence_logit_interpolant}, this
+becomes
+\begin{equation}
+    \mathcal{L}_{\beta_k}(\theta)
+    =
+    \mathbb{E}_{y\sim\pi_\theta(\cdot\mid x)}
+    \left[
+    \sum_{t=1}^{T}
+    \rho_t^{\beta_k}(y)
+    \right],
+    \label{eq:interpolant_kl_decomposition}
+\end{equation}
+where
+\begin{equation}
+    \rho_t^{\beta_k}(y)
+    =
+    \log \pi_\theta(y_t\mid x,y_{<t})
+    -
+    \log \tilde p_{\beta_k}(y_t\mid x,y_{<t},c).
+    \label{eq:interpolant_log_ratio}
+\end{equation}
+
+This objective has the same form as vanilla OPSD, except that the fixed teacher
+$p_T$ is replaced by the scheduled interpolant target $\tilde p_{\beta_k}$. When
+$\beta_k=1$, the interpolant target reduces to the privileged teacher, and
+Eq.~\ref{eq:interpolant_distillation_objective} recovers standard OPSD. For larger
+$\beta_k$, the target remains closer to the reference policy, yielding a more conservative
+distillation objective.
+
+The interpolant target is efficient to compute. Once the reference/student logits and
+teacher logits are available, constructing $\tilde p_{\beta_k}$ only requires an elementwise
+weighted sum of the two logit vectors followed by a softmax, as in
+Eq.~\ref{eq:local_logit_interpolant}. Importantly, this avoids the intractable
+sequence-level normalizer $Z_\beta(x,c)$ in Eq.~\ref{eq:sequence_geometric_mixture}.
+Thus, policy optimization specifies where the student should move, while token-level
+distillation provides an inexpensive way to get there.
+
+\subsection{Practical \texorpdfstring{$\beta$}{beta}-OPSD with Return-to-Go Credit}
+\label{sec:practical_slide_objective}
+We now describe the practical training loss. At each update, we sample trajectories
+on-policy from the current student:
+\begin{equation}
+    y\sim\pi_\theta(\cdot\mid x).
+\end{equation}
+Along the sampled trajectory, we evaluate the token-level mismatch between the student and
+the interpolant target:
+\begin{equation}
+    \rho_t^{\beta_k}(y)
+    =
+    \log \pi_\theta(y_t\mid x,y_{<t})
+    -
+    \log \tilde p_{\beta_k}(y_t\mid x,y_{<t},c).
+    \label{eq:practical_interpolant_log_ratio}
+\end{equation}
+The scalar estimator $\sum_t \rho_t^{\beta_k}(y)$ is an unbiased Monte Carlo estimate of
+the sequence-level reverse KL in Eq.~\ref{eq:interpolant_distillation_objective}. However,
+using each token's instantaneous log-ratio as its training weight gives a myopic gradient:
+it ignores how an earlier token affects future prefixes and future target mismatch.
+
+Therefore, $\beta$-OPSD uses a return-to-go weight:
+\begin{equation}
+    G_{t,\gamma}^{\beta_k}(y)
+    =
+    \sum_{s=t}^{T}
+    \gamma^{s-t}
+    \rho_s^{\beta_k}(y),
+    \qquad
+    \gamma\in[0,1].
+    \label{eq:slide_return_to_go}
+\end{equation}
+When $\gamma=1$, this recovers the exact sequence-level gradient estimator; in practice,
+we use $\gamma<1$ to control the magnitude of the return on long generations. The proof is in Appendix~\ref{app:onpolicy-lookahead-gradient}.
+
+The practical $\beta$-OPSD loss is
+\begin{equation}
+    \mathcal{L}_{\beta}(\theta;y)
+    =
+    \frac{1}{T}
+    \sum_{t=1}^{T}
+    \operatorname{sg}
+    \left(
+    G_{t,\gamma}^{\beta_k}(y)
+    \right)
+    \log \pi_\theta(y_t\mid x,y_{<t}),
+    \label{eq:slide_loss}
+\end{equation}
+where $\operatorname{sg}(\cdot)$ denotes stop-gradient. 
+The interpolant logits and
+return-to-go weights are detached; the only gradient path is through the student
+log-probability. Thus, $\beta$-OPSD differs from vanilla OPSD in two simple ways:
+\begin{enumerate}
+    \item it replaces the fixed teacher target with a scheduled logit-interpolant target, and
+    \item it replaces local token weights with return-to-go weights for sequence-level credit
+    assignment.
+\end{enumerate}
+
+The first modification is the main conceptual contribution: it follows from the
+$\beta$-OPSD optimal policy. The second is a practical sequence-level estimator that makes
+the distillation loss faithful to the trajectory objective.

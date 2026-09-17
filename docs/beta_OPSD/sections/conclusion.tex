@@ -1,0 +1,18 @@
+\section{Conclusion}
+\label{sec:conclusion}
+We introduced \ours{}, a framework built on the view that on-policy distillation is
+trajectory-level policy optimization rather than merely local token imitation. Under this
+view, standard sequence-level OPSD is the $\beta=1$ teacher endpoint of a
+reference-regularized RL family. In the conservative regime, the optimal policies form a
+geometric path from a reference student to the privileged teacher, motivating tractable
+token-level logit interpolants instead of direct teacher matching throughout training.
+
+\ours{} further replaces the myopic local token-KL update with a return-to-go credit assignment that
+accounts for future distributional mismatch and provides an unbiased gradient estimator for
+the sequence-level objective. Experiments on competition-level mathematical reasoning
+benchmarks show consistent improvements over vanilla OPSD, SFT, and GRPO methods. Our
+ablations confirm the importance of both interpolant targets and future-aware credit
+assignment. These results suggest that smooth target paths and trajectory-level credit
+assignment are effective principles for on-policy distillation. Exploring adaptive or
+theoretically optimized interpolation schedules, lower-variance return-to-go estimators, and
+applications beyond mathematical reasoning are promising directions for future work.

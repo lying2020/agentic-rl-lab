@@ -1,0 +1,135 @@
+\RequirePackage[svgnames]{xcolor}
+
+\documentclass[11pt,letterpaper]{mystyle}
+
+\usepackage[all]{hypcap}
+\usepackage[svgnames]{xcolor}
+\usepackage[comma,authoryear,compress]{natbib}
+\bibliographystyle{plainnat}
+
+\hypersetup{
+    colorlinks = true,
+    linkcolor = ThemeBlue,
+    citecolor = ThemeBlue,
+    urlcolor = ThemeBlue,
+}
+\usepackage{iftex}
+\ifPDFTeX
+\else
+    \usepackage{unicode-math}
+    \setmathfont{Latin Modern Math}
+\fi
+\usepackage{algorithm}
+\usepackage{algorithmicx}
+\usepackage{algpseudocode}
+\usepackage{microtype}
+\usepackage{graphicx}
+\usepackage{booktabs} %
+\usepackage{float}
+\usepackage{bigstrut}
+\usepackage{booktabs}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{mathtools}
+\usepackage{amsthm}
+\usepackage{nicefrac}
+\usepackage{dsfont}
+\usepackage{enumitem}
+\usepackage{cleveref}
+\usepackage{bxcoloremoji}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{xspace}
+\setlength\parindent{0pt}
+
+\usepackage[utf8]{inputenc} %
+\usepackage[T1]{fontenc}    %
+\usepackage{hyperref}       %
+\usepackage{url}            %
+\usepackage{booktabs}       %
+\usepackage{amsfonts}       %
+\usepackage{nicefrac}       %
+\usepackage{microtype}      %
+\usepackage{graphicx}
+\usepackage{amssymb}
+\usepackage{wrapfig}
+\usepackage{lipsum}
+\usepackage{enumitem}
+\usepackage{stackengine}
+\usepackage[font=small,labelfont=bf]{caption}
+\usepackage{color}
+\usepackage{adjustbox}
+\usepackage{lipsum}
+
+\usepackage{rotating}
+\usepackage{makecell}
+\usepackage{multirow}
+\usepackage{booktabs}
+\usepackage[table]{xcolor}
+
+\input{macro}
+
+\newtcolorbox{AIbox}[2][]{aibox,title=#2,#1}
+\definecolor{lightblue}{rgb}{0.22,0.45,0.70}%
+\definecolor{Gray}{gray}{0.95}
+\definecolor{Cornsilk}{rgb}{1.0, 0.97, 0.86}
+
+\newcommand{\williex}[1]{{\color{magenta}WN: #1}}
+\newcommand{\olcomment}[1]{{\color{olive}[OL: #1]}}
+\newcommand{\wss}[1]{{\color{blue}WSS: #1}}
+\newcommand{\jcomment}[1]{{\color{purple}Julian: #1}}
+\newcommand{\omer}[1]{{\color{green}ömer: #1}}
+\newcommand{\enes}[1]{{\color{orange}enes: #1}}
+\newcommand{\todo}[1]{{\color{red}TODO: #1}}
+
+\usepackage{amsmath}
+
+\usepackage[all]{hypcap}
+
+% Title
+% \title{\paperlogo{} \ours: From Self-Distillation\\ to Policy Optimization and Back}
+\title{\ours: Deriving with Policy Optimization, Training with Self-Distillation}
+
+% Running title
+% \runningtitle{\ours: From Self-Distillation to Policy Optimization and Back}
+\runningtitle{\ours: 
+Deriving with Policy Optimization, Training with Self-Distillation}
+
+\author[1,*]{Jiawei Xu}
+\author[1,*]{Minghui Liu}
+\author[1]{Juzheng Zhang}
+\author[1]{Tom Goldstein}
+\author[1]{Furong Huang}
+
+\affil[1]{University of Maryland, College Park}
+\equalcontribution{* Equal contribution and joint project leadership.}
+
+
+\correspondingauthor{Furong Huang \href{https://furong-huang.com}{https://furong-huang.com}; Email \href{mailto:furongh@umd.edu}{furongh@umd.edu}}
+
+\begin{document}
+
+\input{sections/abstract}
+
+\begingroup
+\hbadness=10000
+\maketitle
+\endgroup
+\vspace{2mm}
+
+\input{figures/main_plot}
+\input{sections/introduction}
+\input{sections/method}
+\input{sections/relatedwork}
+\input{sections/experiments}
+% \clearpage
+\input{sections/conclusion}
+\input{sections/acknowledge}
+\clearpage
+\bibliography{main}
+
+\appendix
+\input{sections/appendix}
+\end{document}

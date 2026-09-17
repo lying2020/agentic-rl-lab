@@ -1,0 +1,23 @@
+\begin{algorithm}[t]
+\caption{\ours: Smooth Target Distillation Toward Logit Interpolants}
+\label{alg:slide}
+\begin{algorithmic}[1]
+\Require Student $\pi_\theta$, privileged teacher $p_T$, dataset $\mathcal{D}$,
+training budget $K$, schedule endpoints $w_{\mathrm{start}},w_{\mathrm{end}}$,
+discount factor $\gamma$
+\For{$k=0,\ldots,K-1$}
+    \State Sample a minibatch $(x,c)\sim\mathcal{D}$
+    \State Sample on-policy responses $y=(y_1,\ldots,y_T)\sim\pi_\theta(\cdot\mid x)$
+    \State Set normalized progress $s_k=k/(K-1)$
+    \State Set teacher weight $w_k$ by Eq.~\ref{eq:exp_weight_schedule} and $\beta_k=1/w_k$
+    \State Set $\bar{\theta}\leftarrow \operatorname{sg}(\theta)$
+    \State Construct interpolant targets $\tilde p_{\beta_k}(\cdot\mid h_t,c)$
+    along the sampled prefixes using Eq.~\ref{eq:exp_interpolant_target}
+    \State Compute token mismatches $\rho_t^{\beta_k}(y)$ using Eq.~\ref{eq:exp_token_mismatch}
+    \State Compute discounted return-to-go weights $G_{t,\gamma}^{\beta_k}(y)$
+    using Eq.~\ref{eq:exp_return_to_go}
+    \State Minimize $\mathcal{L}_{\ours}(\theta;y)$ in Eq.~\ref{eq:exp_beta_opsd_loss}
+    and update $\theta$
+\EndFor
+\end{algorithmic}
+\end{algorithm}

@@ -1,0 +1,84 @@
+
+\vspace{-4mm}
+\section{Introduction}
+
+Reasoning performance of large language models has advanced rapidly through reinforcement
+learning and self-improvement techniques
+\citep{shao2024deepseekmath, ouyang2022training, guo2025deepseek}. Among these approaches,
+on-policy self-distillation (OPSD) is a promising way to improve reasoning: the student learns
+from its own sampled trajectories while a teacher supplies supervision using privileged
+information available only during training, such as reference solutions, verified reasoning
+traces, or external feedback
+\citep{zhao2026self, shenfeld2026self, hubotter2026reinforcement, li2026rethinking,
+jang2026stable, yang2026self}. Unlike offline distillation, OPSD lets the teacher respond to
+the student's actual intermediate states. Yet this promise has not produced a reliably
+effective recipe; in practice, OPSD can be brittle and often demands substantial engineering.
+
+Most existing OPSD methods begin from direct teacher imitation. Given a student-generated
+trajectory, the privileged teacher provides token-level predictions, and the student minimizes
+a reverse Kullback--Leibler (KL) divergence to those predictions
+\citep{zhao2026self, jang2026stable, li2026rethinking, yang2026self}. This formulation fixes
+the teacher as the unique optimization target and provides no explicit control over how
+aggressively the student should move away from its current or initial policy. Is direct teacher
+matching truly the only principled OPSD objective?
+
+Our key observation is that it is not. Vanilla OPSD is precisely the $\beta=1$ member of a
+broader KL-regularized policy-optimization family, where $\beta$ weights the KL penalty that
+anchors the learned policy to a reference policy. This equivalence turns $\beta$ from an
+implicit value fixed at one into an explicit control over the strength of teacher guidance.
+It also changes the interpretation of OPSD: rather than a single teacher-imitation objective,
+it is one point in a continuum of policy-optimization problems that trade off improvement
+toward the privileged teacher against proximity to the reference policy.
+
+This perspective leads to \oursbold, a generalized family of on-policy self-distillation
+objectives parameterized by $\beta$. Vanilla OPSD is recovered exactly at $\beta=1$, while
+larger values yield more conservative updates that remain closer to the reference policy.
+The family therefore exposes a degree of freedom that vanilla OPSD leaves fixed and offers
+a principled mechanism for addressing its brittleness: instead of moving abruptly toward
+the teacher, the target can progress smoothly from the reference policy toward privileged
+teacher guidance over the course of training.
+
+The policy-optimization view also tells us what these targets should be. We derive the
+optimal policy of \ours{} in closed form and show that it is a geometric interpolation
+between the reference policy and the privileged teacher. Directly optimizing the resulting
+RL objective, however, would incur costly rollouts, advantage estimation, and high-variance
+gradients; the exact sequence-level optimum also contains an intractable normalizer. We
+therefore use policy optimization for the derivation and return to distillation for training.
+Each value of $\beta$ defines an RL-derived target along the reference-to-teacher path, which
+we realize efficiently through token-level logit interpolation. Scheduling $\beta$ then gives
+a smooth curriculum of targets while preserving the computational structure of OPSD. In
+short, inexpensive distillation approximates the solution of expensive policy optimization.
+
+Finally, matching the right target still requires assigning credit across the generated
+trajectory. Standard token-local OPSD updates are myopic: an early token changes later
+prefixes and therefore affects future student--target mismatch. A policy-gradient derivation
+of the sequence-level objective yields return-to-go credit assignment, which propagates this
+future mismatch back to earlier tokens. Combined with the interpolated target, this gives a
+practical algorithm that retains token-level distillation while more faithfully optimizing the
+underlying sequence-level objective.
+
+We evaluate \ours{} on mathematical reasoning benchmarks using open-source reasoning
+language models ranging from 1.7B to 8B parameters. Across multiple benchmarks, \ours{}
+consistently improves optimization stability and reasoning performance over vanilla OPSD.
+On Qwen3-1.7B \citep{yang2025qwen3}, it improves avg@12 by up to 9.16 percentage points
+over vanilla OPSD across AIME 2024 \citep{aime24}, AIME 2025 \citep{aime25}, and HMMT
+2025 \citep{dekoninck2026matharena}. Ablations further isolate the benefits of both the
+RL-derived interpolation target and sequence-level return-to-go credit assignment.
+
+
+Our contributions are summarized as follows: 
+\begin{itemize} 
+    \item We show that vanilla OPSD is precisely the $\beta=1$ member of a broader
+    KL-regularized policy-optimization family, making its implicit regularization choice
+    explicit and controllable.
+    \item We introduce \oursbold and derive its closed-form optimal policy as a geometric
+    interpolation between the reference policy and the privileged teacher.
+    \item We turn the RL-derived solution back into an efficient distillation algorithm using
+    scheduled logit interpolation and return-to-go credit assignment.
+    \item We demonstrate consistent improvements over vanilla OPSD on mathematical
+    reasoning benchmarks and validate the contribution of both practical components.
+\end{itemize}
+
+
+\label{sec:intro}
+\vspace{-2mm}

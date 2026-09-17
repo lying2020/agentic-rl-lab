@@ -1,0 +1,697 @@
+\newpage
+
+\section{Notation Reference}
+\label{app:notation}
+\input{sections/notation_table}
+\clearpage
+
+\section{Theoretical Proofs}
+\label{app:rtg-proofs}
+\subsection{Proof of Proposition~\ref{prop:opsd_beta_one}}
+\label{app:regularized_rl}
+\begin{proof}
+Fix a prompt $x$ and privileged context $c$. For readability, we suppress the conditioning
+on $(x,c)$ when it is unambiguous. Expanding Eq.~\ref{eq:beta_opsd_objective}, we have
+\begin{align}
+    \mathcal{J}_{\beta}(\pi_\theta)
+    &=
+    \mathbb{E}_{y\sim\pi_\theta}
+    \left[
+    \log
+    \frac{
+    p_T(y)
+    }{
+    \pi_{\mathrm{ref}}(y)
+    }
+    \right]
+    -
+    \beta
+    D_{\mathrm{KL}}
+    \left(
+    \pi_\theta
+    \,\middle\|\,
+    \pi_{\mathrm{ref}}
+    \right) \\
+    &=
+    \mathbb{E}_{y\sim\pi_\theta}
+    \left[
+    \log p_T(y)
+    -
+    \log \pi_{\mathrm{ref}}(y)
+    \right]
+    -
+    \beta
+    \mathbb{E}_{y\sim\pi_\theta}
+    \left[
+    \log \pi_\theta(y)
+    -
+    \log \pi_{\mathrm{ref}}(y)
+    \right] \\
+    &=
+    \mathbb{E}_{y\sim\pi_\theta}
+    \left[
+    \log p_T(y)
+    -
+    \beta \log \pi_\theta(y)
+    +
+    (\beta-1)\log \pi_{\mathrm{ref}}(y)
+    \right].
+    \label{eq:beta_opsd_expanded}
+\end{align}
+On the other hand,
+\begin{align}
+    &-
+    D_{\mathrm{KL}}
+    \left(
+    \pi_\theta
+    \,\middle\|\,
+    p_T
+    \right)
+    -
+    (\beta-1)
+    D_{\mathrm{KL}}
+    \left(
+    \pi_\theta
+    \,\middle\|\,
+    \pi_{\mathrm{ref}}
+    \right) \\
+    &=
+    -
+    \mathbb{E}_{y\sim\pi_\theta}
+    \left[
+    \log \pi_\theta(y)
+    -
+    \log p_T(y)
+    \right]
+    -
+    (\beta-1)
+    \mathbb{E}_{y\sim\pi_\theta}
+    \left[
+    \log \pi_\theta(y)
+    -
+    \log \pi_{\mathrm{ref}}(y)
+    \right] \\
+    &=
+    \mathbb{E}_{y\sim\pi_\theta}
+    \left[
+    \log p_T(y)
+    -
+    \beta \log \pi_\theta(y)
+    +
+    (\beta-1)\log \pi_{\mathrm{ref}}(y)
+    \right].
+\end{align}
+Comparing this expression with Eq.~\ref{eq:beta_opsd_expanded}, we obtain the equivalent
+decomposition
+\begin{equation}
+    \mathcal{J}_{\beta}(\pi_\theta)
+    =
+    -
+    D_{\mathrm{KL}}
+    \left(
+    \pi_\theta(\cdot\mid x)
+    \,\middle\|\,
+    p_T(\cdot\mid x,c)
+    \right)
+    -
+    (\beta-1)
+    D_{\mathrm{KL}}
+    \left(
+    \pi_\theta(\cdot\mid x)
+    \,\middle\|\,
+    \pi_{\mathrm{ref}}(\cdot\mid x)
+    \right).
+    \label{eq:beta_opsd_decomposition}
+\end{equation}
+Setting $\beta=1$ cancels the reference-regularization term:
+\begin{equation}
+    \mathcal{J}_{1}(\pi_\theta)
+    =
+    -
+    D_{\mathrm{KL}}
+    \left(
+    \pi_\theta(\cdot\mid x)
+    \,\middle\|\,
+    p_T(\cdot\mid x,c)
+    \right).
+\end{equation}
+Therefore,
+\begin{equation}
+    \max_{\theta}\mathcal{J}_{1}(\pi_\theta)
+    \quad
+    \Longleftrightarrow
+    \quad
+    \min_{\theta}
+    D_{\mathrm{KL}}
+    \left(
+    \pi_\theta(\cdot\mid x)
+    \,\middle\|\,
+    p_T(\cdot\mid x,c)
+    \right),
+\end{equation}
+which is exactly the standard sequence-level OPSD objective in
+Eq.~\ref{eq:standard_opsd_kl}. This proves the proposition.
+\end{proof}
+
+\subsection{Proof of Proposition~\ref{prop:geometric_optimal_policy}}
+\label{app:geometric-optimal-policy}
+\begin{proof}
+The $\beta$-OPSD objective:
+\begin{equation}
+    \mathcal{J}_{\beta}(\pi)
+    =
+    \mathbb{E}_{y\sim\pi(\cdot\mid x)}
+    \left[
+    \log
+    \frac{
+    p_T(y\mid x,c)
+    }{
+    \pi_{\mathrm{ref}}(y\mid x)
+    }
+    \right]
+    -
+    \beta
+    D_{\mathrm{KL}}
+    \left(
+    \pi(\cdot\mid x)
+    \,\middle\|\,
+    \pi_{\mathrm{ref}}(\cdot\mid x)
+    \right).
+\end{equation}
+Expanding the KL term gives
+\begin{align}
+    \mathcal{J}_{\beta}(\pi)
+    &=
+    \mathbb{E}_{y\sim\pi}
+    \left[
+    \log p_T(y)
+    -
+    \log \pi_{\mathrm{ref}}(y)
+    \right]
+    -
+    \beta
+    \mathbb{E}_{y\sim\pi}
+    \left[
+    \log \pi(y)
+    -
+    \log \pi_{\mathrm{ref}}(y)
+    \right] \\
+    &=
+    \mathbb{E}_{y\sim\pi}
+    \left[
+    \log p_T(y)
+    -
+    \beta \log \pi(y)
+    +
+    (\beta-1)\log \pi_{\mathrm{ref}}(y)
+    \right].
+    \label{eq:beta_opsd_expanded_for_optimal_policy}
+\end{align}
+
+Now define
+\begin{equation}
+    \pi_{\beta}^{\star}(y\mid x,c)
+    =
+    \frac{
+    \pi_{\mathrm{ref}}(y\mid x)^{1-\frac{1}{\beta}}
+    p_T(y\mid x,c)^{\frac{1}{\beta}}
+    }{
+    Z_{\beta}(x,c)
+    },
+\end{equation}
+where
+\begin{equation}
+    Z_{\beta}(x,c)
+    =
+    \sum_{y'}
+    \pi_{\mathrm{ref}}(y'\mid x)^{1-\frac{1}{\beta}}
+    p_T(y'\mid x,c)^{\frac{1}{\beta}}.
+\end{equation}
+Taking logs, we have
+\begin{equation}
+    \log \pi_{\beta}^{\star}(y\mid x,c)
+    =
+    \left(1-\frac{1}{\beta}\right)
+    \log \pi_{\mathrm{ref}}(y\mid x)
+    +
+    \frac{1}{\beta}
+    \log p_T(y\mid x,c)
+    -
+    \log Z_{\beta}(x,c).
+\end{equation}
+Multiplying both sides by $\beta$ gives
+\begin{equation}
+    \beta \log \pi_{\beta}^{\star}(y\mid x,c)
+    =
+    (\beta-1)
+    \log \pi_{\mathrm{ref}}(y\mid x)
+    +
+    \log p_T(y\mid x,c)
+    -
+    \beta \log Z_{\beta}(x,c).
+    \label{eq:beta_log_optimal_policy}
+\end{equation}
+Substituting Eq.~\ref{eq:beta_log_optimal_policy} into
+Eq.~\ref{eq:beta_opsd_expanded_for_optimal_policy}, we obtain
+\begin{align}
+    \mathcal{J}_{\beta}(\pi)
+    &=
+    \mathbb{E}_{y\sim\pi}
+    \left[
+    \beta \log \pi_{\beta}^{\star}(y\mid x,c)
+    +
+    \beta \log Z_{\beta}(x,c)
+    -
+    \beta \log \pi(y\mid x)
+    \right] \\
+    &=
+    -\beta
+    \mathbb{E}_{y\sim\pi}
+    \left[
+    \log
+    \frac{
+    \pi(y\mid x)
+    }{
+    \pi_{\beta}^{\star}(y\mid x,c)
+    }
+    \right]
+    +
+    \beta \log Z_{\beta}(x,c) \\
+    &=
+    -\beta
+    D_{\mathrm{KL}}
+    \left(
+    \pi(\cdot\mid x)
+    \,\middle\|\,
+    \pi_{\beta}^{\star}(\cdot\mid x,c)
+    \right)
+    +
+    \beta \log Z_{\beta}(x,c).
+    \label{eq:beta_opsd_as_negative_kl}
+\end{align}
+The second term is independent of $\pi$, while the KL term is nonnegative and is minimized
+to zero if and only if
+\begin{equation}
+    \pi(\cdot\mid x)
+    =
+    \pi_{\beta}^{\star}(\cdot\mid x,c).
+\end{equation}
+Therefore, $\pi_{\beta}^{\star}$ is the maximizer of
+Eq.~\ref{eq:beta_opsd_objective}. This proves the proposition.
+\end{proof}
+
+\subsection{Proof of the Return-to-Go Gradient Estimator}
+\label{app:onpolicy-lookahead-gradient}
+\begin{proof}
+We prove that when $\gamma=1$, the return-to-go estimator in
+Eq.~\ref{eq:slide_return_to_go} gives an unbiased estimator of the sequence-level
+reverse-KL gradient.
+
+\begin{proposition}[Unbiased sequence-level gradient estimator]
+\label{prop:rtg_unbiased_beta_opsd}
+Fix a training step $k$ and treat the interpolant target
+$\tilde p_{\beta_k}(\cdot\mid x,c)$ as fixed during the current gradient update. Define
+\begin{equation}
+    \mathcal{L}_{\beta_k}(\theta)
+    =
+    D_{\mathrm{KL}}
+    \left(
+    \pi_\theta(\cdot\mid x)
+    \,\middle\|\,
+    \tilde p_{\beta_k}(\cdot\mid x,c)
+    \right),
+\end{equation}
+and let
+\begin{equation}
+    \rho_t^{\beta_k}(y)
+    =
+    \log \pi_\theta(y_t\mid x,y_{<t})
+    -
+    \log \tilde p_{\beta_k}(y_t\mid x,y_{<t},c).
+\end{equation}
+For $\gamma=1$, define
+\begin{equation}
+    G_t^{\beta_k}(y)
+    =
+    \sum_{s=t}^{T}
+    \rho_s^{\beta_k}(y).
+\end{equation}
+Then
+\begin{equation}
+    \widehat{g}_{\mathrm{RTG}}(y)
+    =
+    \sum_{t=1}^{T}
+    G_t^{\beta_k}(y)
+    \nabla_\theta
+    \log \pi_\theta(y_t\mid x,y_{<t})
+\end{equation}
+satisfies
+\begin{equation}
+    \mathbb{E}_{y\sim \pi_\theta(\cdot\mid x)}
+    \left[
+    \widehat{g}_{\mathrm{RTG}}(y)
+    \right]
+    =
+    \nabla_\theta
+    \mathcal{L}_{\beta_k}(\theta).
+\end{equation}
+\end{proposition}
+
+\begin{proof}
+For readability, fix $x,c,\beta_k$ and suppress them when clear. By the autoregressive
+factorization,
+\begin{equation}
+    \pi_\theta(y\mid x)
+    =
+    \prod_{t=1}^{T}
+    \pi_\theta(y_t\mid x,y_{<t}),
+    \qquad
+    \tilde p_{\beta_k}(y\mid x,c)
+    =
+    \prod_{t=1}^{T}
+    \tilde p_{\beta_k}(y_t\mid x,y_{<t},c).
+\end{equation}
+Therefore,
+\begin{equation}
+    \mathcal{L}_{\beta_k}(\theta)
+    =
+    \mathbb{E}_{y\sim\pi_\theta(\cdot\mid x)}
+    \left[
+    \sum_{t=1}^{T}
+    \rho_t^{\beta_k}(y)
+    \right].
+\end{equation}
+Let
+\begin{equation}
+    R^{\beta_k}(y)
+    :=
+    \sum_{t=1}^{T}
+    \rho_t^{\beta_k}(y),
+    \qquad
+    g_t(y)
+    :=
+    \nabla_\theta
+    \log \pi_\theta(y_t\mid x,y_{<t}).
+\end{equation}
+Then
+\begin{equation}
+    \mathcal{L}_{\beta_k}(\theta)
+    =
+    \mathbb{E}_{y\sim\pi_\theta}
+    \left[
+    R^{\beta_k}(y)
+    \right].
+\end{equation}
+Differentiating with the score-function identity gives
+\begin{align}
+    \nabla_\theta \mathcal{L}_{\beta_k}(\theta)
+    &=
+    \mathbb{E}_{y\sim\pi_\theta}
+    \left[
+    R^{\beta_k}(y)
+    \nabla_\theta \log \pi_\theta(y\mid x)
+    \right]
+    +
+    \mathbb{E}_{y\sim\pi_\theta}
+    \left[
+    \nabla_\theta R^{\beta_k}(y)
+    \right].
+\end{align}
+Since
+\begin{equation}
+    \nabla_\theta \log \pi_\theta(y\mid x)
+    =
+    \sum_{t=1}^{T}
+    g_t(y),
+\end{equation}
+and the interpolant target $\tilde p_{\beta_k}$ is fixed during the update,
+\begin{equation}
+    \nabla_\theta R^{\beta_k}(y)
+    =
+    \sum_{t=1}^{T}
+    g_t(y).
+\end{equation}
+The expected score is zero:
+\begin{equation}
+    \mathbb{E}_{y\sim\pi_\theta}
+    \left[
+    \sum_{t=1}^{T}
+    g_t(y)
+    \right]
+    =
+    0.
+\end{equation}
+Thus,
+\begin{align}
+    \nabla_\theta \mathcal{L}_{\beta_k}(\theta)
+    &=
+    \mathbb{E}_{y\sim\pi_\theta}
+    \left[
+    R^{\beta_k}(y)
+    \sum_{t=1}^{T}
+    g_t(y)
+    \right] \\
+    &=
+    \mathbb{E}_{y\sim\pi_\theta}
+    \left[
+    \sum_{t=1}^{T}
+    g_t(y)
+    \sum_{s=1}^{T}
+    \rho_s^{\beta_k}(y)
+    \right].
+    \label{eq:full_return_gradient_beta}
+\end{align}
+
+We now remove the past terms by causality. For $s<t$, the quantity
+$\rho_s^{\beta_k}(y)$ depends only on earlier tokens and is fixed after conditioning on the
+prefix $(x,y_{<t})$. Meanwhile,
+\begin{align}
+    \mathbb{E}_{y_t\sim\pi_\theta(\cdot\mid x,y_{<t})}
+    \left[
+    g_t(y)
+    \mid x,y_{<t}
+    \right]
+    &=
+    \sum_{v\in\mathcal{V}}
+    \pi_\theta(v\mid x,y_{<t})
+    \nabla_\theta
+    \log \pi_\theta(v\mid x,y_{<t}) \\
+    &=
+    \sum_{v\in\mathcal{V}}
+    \nabla_\theta
+    \pi_\theta(v\mid x,y_{<t}) \\
+    &=
+    \nabla_\theta
+    \sum_{v\in\mathcal{V}}
+    \pi_\theta(v\mid x,y_{<t}) \\
+    &=
+    0.
+\end{align}
+Therefore,
+\begin{equation}
+    \mathbb{E}_{y\sim\pi_\theta}
+    \left[
+    g_t(y)
+    \sum_{s<t}
+    \rho_s^{\beta_k}(y)
+    \right]
+    =
+    0.
+\end{equation}
+Applying this to Eq.~\ref{eq:full_return_gradient_beta}, only the current and future terms
+remain:
+\begin{align}
+    \nabla_\theta \mathcal{L}_{\beta_k}(\theta)
+    &=
+    \mathbb{E}_{y\sim\pi_\theta}
+    \left[
+    \sum_{t=1}^{T}
+    g_t(y)
+    \sum_{s=t}^{T}
+    \rho_s^{\beta_k}(y)
+    \right] \\
+    &=
+    \mathbb{E}_{y\sim\pi_\theta}
+    \left[
+    \sum_{t=1}^{T}
+    G_t^{\beta_k}(y)
+    g_t(y)
+    \right].
+\end{align}
+This proves that the return-to-go estimator is unbiased for the sequence-level gradient.
+\end{proof}
+
+Finally, the practical surrogate in Eq.~\ref{eq:slide_loss} with $\gamma=1$ has gradient
+\begin{equation}
+    \nabla_\theta \mathcal{L}_{\ours{}}(\theta;y)
+    =
+    \frac{1}{T}
+    \sum_{t=1}^{T}
+    G_t^{\beta_k}(y)
+    \nabla_\theta
+    \log \pi_\theta(y_t\mid x,y_{<t}),
+\end{equation}
+where the return weights are detached. Hence, its expectation equals
+$\frac{1}{T}\nabla_\theta \mathcal{L}_{\beta_k}(\theta)$. The factor $1/T$ is only a
+normalization constant. For $\gamma<1$, the same loss becomes a discounted practical
+approximation that reduces the magnitude and variance of long-horizon returns, but the
+exact unbiasedness statement corresponds to $\gamma=1$.
+\end{proof}
+
+
+\section{Experimental Details}
+\label{sec:exp_details}
+\subsection{Training Details}
+\label{sec:training_detail}
+\paragraph{Shared training configuration.}
+Vanilla OPSD and \ours{} use the same model, optimization settings, rollout configuration,
+and computational budget. We train Qwen3-1.7B on four NVIDIA RTX A6000 GPUs using
+four-way data parallelism with \texttt{accelerate}. Each training rank runs a colocated
+single-GPU vLLM instance for on-policy generation. Training is run for a maximum of
+$200$ optimization steps with an eight-hour wall-time limit.
+
+\paragraph{Optimization and parameter-efficient tuning.}
+We use a learning rate of $5\times10^{-6}$ and clip the gradient norm at $0.1$.
+The per-device batch size is $1$, with $8$ gradient-accumulation steps, giving an effective
+batch size of
+\begin{equation}
+    4\ \text{GPUs}
+    \times 1\ \text{sample per GPU}
+    \times 8\ \text{accumulation steps}
+    = 32.
+\end{equation}
+Gradient checkpointing is enabled. All models are trained in bfloat16 precision using
+FlashAttention-2. We use LoRA with rank $r=64$ and scaling parameter
+$\alpha_{\mathrm{LoRA}}=128$. LoRA adapters are applied to
+\texttt{q\_proj}, \texttt{k\_proj}, \texttt{v\_proj}, \texttt{o\_proj},
+\texttt{gate\_proj}, \texttt{up\_proj}, and \texttt{down\_proj}.
+
+\paragraph{On-policy generation.}
+Training trajectories are generated with a maximum sequence length of $20{,}000$ tokens
+and a maximum completion length of $1{,}024$ tokens. We sample with temperature $1.1$,
+top-$p=0.95$, and top-$k=20$. Generation uses vLLM in colocated mode with tensor-parallel
+size $1$ and GPU-memory utilization set to $0.5$. Unless otherwise stated, these settings
+are shared by Vanilla OPSD and \ours{}, ensuring that their comparison isolates the effect of
+the distillation objective and Look-Ahead credit assignment.
+
+\subsection{Evaluation Details}
+\label{sec:eval_detail}
+\paragraph{Evaluation pipeline.}
+We evaluate the Qwen3-1.7B, Qwen3-4B and Qwen3-8B checkpoints using their corresponding
+LoRA adapters loaded on top of the original Qwen3 base models.
+We evaluate on AIME 2024, AIME 2025, and HMMT 2025.
+
+\paragraph{Decoding configuration.}
+We use stochastic decoding with thinking mode enabled. For each problem, we generate
+$k=12$ independent candidate solutions using temperature $0.6$, top-$p$ sampling with
+$p=0.95$, and top-$k=50$. The evaluation batch size is $32$. We set
+\texttt{max\_new\_tokens=0}, corresponding to no separate completion-length cap in the
+evaluation script, and use the default maximum model length of $40{,}960$ tokens in
+thinking mode. Unless explicitly changed for an ablation, all reported results use this
+same decoding configuration.
+
+\paragraph{Scoring and metrics.}
+We report
+\emph{pass@12}, the fraction of problems for which at least one of the 12 sampled
+solutions is correct, and \emph{avg@12}, the average correctness across all 12 sampled
+solutions. The evaluation code returns both metrics as raw fractions; throughout the paper,
+we multiply them by $100$ and report percentage points.
+
+\paragraph{Inference configuration.}
+Evaluation uses tensor-parallel size $1$, GPU memory utilization $0.9$, and a single
+evaluation repeat. LoRA checkpoints are evaluated without modifying the underlying base
+model weights. Checkpoint sweeps evaluate training steps
+$\{50,75,100,200\}$, with one Slurm evaluation job submitted for each
+checkpoint--dataset pair.
+
+\section{Sampling from Logit Interpolants}
+\label{app:proposal_mixture}
+In addition to student on-policy sampling, we evaluate a guided sampling variant that
+constructs trajectories from a mixture of the student and privileged teacher. For proposal-mixture weight $\eta\in[0,1]$, we define the token-level proposal distribution
+\begin{equation}
+    m_{\bar{\theta},\eta}(\cdot\mid h_t,c)
+    =
+    (1-\eta)\,
+    \pi_{\bar{\theta}}(\cdot\mid h_t)
+    +
+    \eta\,
+    p_T(\cdot\mid h_t,c),
+    \label{eq:student_teacher_mixed_sampler}
+\end{equation}
+where $\pi_{\bar{\theta}}$ is a stop-gradient copy of the current student. Thus,
+$\eta=0$ recovers student on-policy sampling, whereas $\eta=1$ samples entirely from
+the privileged teacher. The resulting autoregressive proposal is
+\begin{equation}
+    m_{\bar{\theta},\eta}(y\mid x,c)
+    =
+    \prod_{t=1}^{T}
+    m_{\bar{\theta},\eta}(y_t\mid x,y_{<t},c).
+    \label{eq:student_teacher_mixed_sequence}
+\end{equation}
+
+Because the objective in Eq.~\ref{eq:standard_opsd_kl} is defined under the student trajectory
+distribution $\pi_\theta$, sampling from $m_{\bar{\theta},\eta}$ introduces a distribution
+mismatch. We correct this mismatch using per-decision importance sampling. For a trajectory
+$y\sim m_{\bar{\theta},\eta}(\cdot\mid x,c)$, we define
+\begin{equation}
+    w_t(y)
+    =
+    \frac{
+    \pi_\theta(y_t\mid x,y_{<t})
+    }{
+    m_{\bar{\theta},\eta}(y_t\mid x,y_{<t},c)
+    },
+    \qquad
+    W_t(y)
+    =
+    \prod_{i=1}^{t} w_i(y).
+    \label{eq:mixed_sampling_importance_ratio}
+\end{equation}
+The importance-weighted Look-Ahead return is
+\begin{equation}
+    G_{t,\gamma}^{\eta,\mathrm{mix}}(y)
+    =
+    \sum_{s=t}^{T}
+    \gamma^{s-t}
+    W_s(y)\rho_s^\tau(y),
+    \label{eq:mixed_sampling_lookahead_return}
+\end{equation}
+where $\rho_s^\tau$ measures the student mismatch with the logit-interpolant target. We optimize the corresponding
+surrogate
+\begin{equation}
+    \mathcal{L}_{\mathrm{mix\text{-}\ours}}(\theta;y)
+    =
+    \frac{1}{T}
+    \sum_{t=1}^{T}
+    \operatorname{sg}
+    \left(
+    G_{t,\gamma}^{\tau,\mathrm{mix}}(y)
+    \right)
+    \log \pi_\theta(y_t\mid x,y_{<t}).
+    \label{eq:mixed_sampling_lad_loss}
+\end{equation}
+We note that this variant is inherently off-policy and requires combining the student and
+teacher distributions at every decoding step. At the time of writing, such dual-model sampling is \textbf{not} directly supported by standard vLLM decoding pipelines, resulting in additional (nearly double)
+implementation complexity and generation overhead. Although mixed student--teacher
+sampling yields comparable improvements over vanilla OPSD, its reduced
+sampling efficiency makes it less attractive in practice. 
+
+\paragraph{Results}
+We evaluate fixed proposal-mixture weights
+$\eta\in\{0.2,0.5,0.8\}$ and linear schedules that either increase or decrease $\eta$
+during training. Here, $\eta$ denotes the teacher weight in
+Eq.~\ref{eq:student_teacher_mixed_sampler}, while $1-\eta$ denotes the student weight.
+All mixed-sampling variants use \ours{} with discount factor $\gamma=0.99$ and
+per-decision importance sampling (IS).
+
+\input{tables/app_mix_sampling}
+
+Table~\ref{tab:mixed_sampling_results} shows that mixed student--teacher sampling can
+produce improvements comparable to those of the main on-policy \ours{} method. At 200
+steps, every evaluated schedule improves avg@12 over Vanilla OPSD on both AIME
+benchmarks. Across all checkpoints, the best observed gains over Vanilla OPSD are $8.06$
+points on AIME 2024, $5.55$ points on AIME 2025, and $3.06$ points on HMMT 2025.
+However, no single proposal schedule dominates across all benchmarks, indicating that the
+off-policy variant is sensitive to both the mixture coefficient and the training checkpoint.
+Given its additional dual-model decoding cost and the variance introduced by importance
+sampling, we use student on-policy sampling as the default implementation of \ours{}.

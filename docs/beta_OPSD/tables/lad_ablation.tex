@@ -1,0 +1,25 @@
+\begin{table}[t]
+\centering
+\small
+\caption{
+Effect of return-to-go credit assignment. Both variants use the same logit-interpolant
+target with fixed schedules $w_{k}=\frac{1}{\beta_k}=0.5$. We report avg@12 (\%).
+}
+\label{tab:lookahead_credit_ablation}
+\begin{tabular}{lccc}
+\toprule
+Method
+& AIME 2024
+& AIME 2025
+& HMMT 2025 \\
+\midrule
+Local Token Gradient& 49.44
+& 32.78
+& 13.06 \\
+\textbf{Return-to-go Gradient}
+& \textbf{50.56}
+& \textbf{38.33}
+& \textbf{16.67} \\
+\bottomrule
+\end{tabular}
+\end{table}
