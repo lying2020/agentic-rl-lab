@@ -130,17 +130,29 @@ $$
 
 ```mermaid
 flowchart TB
-  X["题 x + 特权解 c"] --> S["学生 π_θ 只看 x<br/>on-policy 采样 y"]
-  X --> T["特权教师 p_T 看 x,c<br/>通常是冻结初始权重"]
+  X["题 x + 特权解 c"] --> S["学生 pi_theta 只看 x<br/>on-policy 采样 y"]
+  X --> T["特权教师 pT 看 x,c<br/>通常是冻结初始权重"]
   S --> Mix
   T --> Mix
-  Ref["参考端点 π_ref<br/>默认: sg 当前学生"] --> Mix
-  Mix["模块 A  目标构造<br/>w_k = 1/β_k 线性课程<br/>p̃ = softmax((1-w) z_ref + w z_T)"]
-  Mix --> Rho["ρ_t = log π_θ(y_t) - log p̃(y_t)"]
-  Rho --> B["模块 B  Return-to-go<br/>G_t = Σ_{s≥t} γ^{s-t} ρ_s<br/>γ=0.99, sg(G)"]
-  B --> L["L = (1/T) Σ sg(G_t) log π_θ(y_t)<br/>只反传学生 logprob"]
-  L --> Up["更新 LoRA 学生"]
+  Ref["参考端点 pi_ref<br/>默认 sg 当前学生"] --> Mix
+  Mix["模块 A 目标构造<br/>wk=1/beta_k 线性课程<br/>logit 插值后 softmax 得 ptilde"]
+  Mix --> Rho["token mismatch rho_t"]
+  Rho --> B["模块 B Return-to-go<br/>折现后缀和 Gt<br/>gamma=0.99 且 stopgrad G"]
+  B --> Loss["加权 logprob 损失<br/>只反传学生 logprob"]
+  Loss --> Up["更新 LoRA 学生"]
 ```
+
+节点对应公式：
+
+$$
+\begin{aligned}
+w_k &= 1/\beta_k, \\
+\tilde p &= \operatorname{softmax}\big((1-w)\,z_{\mathrm{ref}} + w\,z_T\big), \\
+\rho_t &= \log\pi_\theta(y_t)-\log\tilde p(y_t), \\
+G_t &= \sum_{s\ge t}\gamma^{s-t}\rho_s,\quad \gamma=0.99,\ \operatorname{sg}(G), \\
+L &= \frac{1}{T}\sum_t \operatorname{sg}(G_t)\log\pi_\theta(y_t).
+\end{aligned}
+$$
 
 可选附录支路（默认不用）：混合采样改变 $y$ 的提议分布，必须做重要性采样，vLLM 不好支持，作者自己也不当主方法。
 

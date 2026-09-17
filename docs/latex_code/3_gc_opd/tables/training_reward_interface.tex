@@ -1,0 +1,24 @@
+\begin{table}[ht]
+\captionsetup{justification=raggedright,singlelinecheck=false,skip=6pt}
+\caption{Composition and reward interfaces of the 9{,}527-prompt GoLongRL subset after the 32K filter. ``B'' denotes a binary reward in $\{0,1\}$; ``G'' denotes a graded score in $[0,1]$.}
+\label{tab:training-rewards}
+\centering
+\small
+\setlength{\tabcolsep}{3.2pt}
+\renewcommand{\arraystretch}{1.05}
+\begin{tabular}{@{}l c l@{}}
+\toprule
+\textbf{Task Family} & \textbf{\# Samples} & \textbf{Native Verifier} \\
+\midrule
+Precise Long-Range Retrieval & 4,693 & Exact Match (B) \\
+Evidence-Grounded Reasoning & 3,204 & Accuracy (B) \\
+Multi-Table Extraction & 729 & IoU (G) \\
+High-Recall Retrieval & 540 & Set F1 (G) \\
+Fragment Matching and Induction & 148 & Subset EM (G) \\
+Sequence Reconstruction & 69 & Pairwise Acc. (G) \\
+Numerical Reasoning & 54 & Math Verify (B) \\
+Graded Retrieval and Ranking & 45 & NDCG (G) \\
+Long-Document Summarization & 45 & ROUGE-L (G) \\
+\bottomrule
+\end{tabular}
+\end{table}

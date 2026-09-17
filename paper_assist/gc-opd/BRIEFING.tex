@@ -1,0 +1,111 @@
+\documentclass[11pt,a4paper]{ctexart}
+\usepackage{amsmath,amssymb,mathtools,bm}
+\usepackage{booktabs,longtable,array}
+\usepackage{hyperref}
+\usepackage{geometry}
+\usepackage{verbatim}
+\geometry{margin=2.2cm}
+\title{组会汇报：GC-OPD（Group-Calibrated On-Policy Distillation）}
+\author{Paper Read Skill}
+\date{\today}
+\begin{document}
+\maketitle
+\tableofcontents
+\newpage
+
+\noindent\textbf{论文}：Zhang, Wang et al.
+\textit{Beyond Teacher Likelihood: Group-Calibrated On-Policy Distillation for Long-Context Reasoning}.
+arXiv:2608.19181v1.
+代码：\url{https://github.com/SolereZhang/GC-OPD}。
+PDF：\texttt{docs/3\_GC-OPD.pdf}。
+
+\section{一句话贡献}
+长上下文中教师 token 偏好会与任务验证器分歧。
+GC-OPD 不改教师前向，只在每个 rollout 组内分别对验证器奖励和轨迹级 OPD 分做 $z$-score，
+取其差作为有符号残差，再用 RACA 按相对 OPD 优势摊到 token 上，加回原始稠密 OPD 优势。
+
+\section{任务定义与动机剖析}
+
+\subsection{任务}
+Qwen3-4B/8B（no-thinking）的长上下文 OPD 后训练。
+教师 Qwen3-30B-A3B-Thinking-2507 只对学生已采样 token 给 logprob。
+训练 GoLongRL 滤到 $\le 32$K，共 $9527$ prompt。
+评测 DocMath、Frames、MRCR、CorpusQA、LBv1QA 未加权平均。
+
+\subsection{问题与动机}
+Token 优势 $A_t=\log\pi_T-\log\pi_{\theta_{\mathrm{old}}}$ 的期望是负 reverse-KL，测教师偏好而非任务成功。
+长输入上学生更易写出局部通顺但漏证据的回答。
+固定 8 条回答的诊断：MTE 的 pairwise disagreement 从 $<$8K 的 $40.6\%$ 升到 32--64K 的 $64.0\%$，
+OPD preference gap 从 $+0.35$ 降到 $-0.37$；HRR 类似。更长时 OPD 开始更支持验证器更差的回答。
+
+\subsection{现有局限}
+ExOPD/PowerOPD/FiRe-OPD 改教师信号几何但不显式对比验证器；
+SCOPE/MOPD 路由或加权轨迹，易丢掉 graded 间距或原始 $A_t$；
+Uni-OPD 做类间 margin；过程监督需要步标签。
+本文要保留 graded 组内差异，并把轨迹分歧变成 token 依赖校正。
+
+\subsection{例子}
+回答 A 漏表但教师喜欢（$\tilde R=-0.8,\tilde s=+1.1$），$\rho=-1.9$；
+回答 B 抽全了表（$\tilde R=+0.8,\tilde s=-0.4$），$\rho=+1.2$。
+Vanilla OPD 推 A；残差压 A、抬 B。$\beta=0.10$ 使校正保持为校准。
+
+\section{方法论树状拆解}
+\begin{verbatim}
+GC-OPD
+|-- 1 组内相对评估（教师 pass 不变）
+|     At; s=mean At; R; 分别 z-score
+|-- 2 残差 rho = Rtilde - stilde
+|     减去 OPD 已表达的相对偏好；sigma 过小则 rho=0
+`-- 3 RACA
+      ut=(At-s)/sigmaA; ct=1+tanh(ut/2) in (0,2)
+      A' = At + beta * ct * rho; clip [-10,10]
+\end{verbatim}
+$\beta=0$ 精确等于 vanilla OPD。
+
+\section{算法流程与公式细节推演}
+轨迹分与残差（paper Eq.~(3),(6),(7)）：
+\begin{align}
+s^{(i)}&=\frac1{T^{(i)}}\sum_{t}A_t^{(i)},\\
+\tilde R^{(i)}&=z(R^{(i)}),\quad
+\tilde s^{(i)}=z(s^{(i)}),\quad
+\rho^{(i)}=\tilde R^{(i)}-\tilde s^{(i)}.
+\end{align}
+若 $R^{(i)}>R^{(j)}$ 但 $s^{(i)}<s^{(j)}$，则 $\rho^{(i)}-\rho^{(j)}>0$（paper Eq.~(8)）。
+RACA（paper Eq.~(9)--(11)）：
+\begin{align}
+u_t^{(i)}&=\frac{A_t^{(i)}-s^{(i)}}{\sigma_A^{(i)}+\epsilon},\\
+c_t^{(i)}&=1+\tanh(u_t^{(i)}/2),\\
+A_t^{\prime(i)}&=A_t^{(i)}+\beta\,c_t^{(i)}\,\rho^{(i)}.
+\end{align}
+信用恒正，只缩放不反转 $\rho$ 的符号。
+守卫：$\tau_G=\tau_T=10^{-6}$，$a_{\max}=10$。
+无额外师生前向。
+
+\section{实验设定与资源开销}
+对照：Raw、OPD、ExOPD$^\dagger$、Uni-OPD$^\dagger$、PowerOPD$^\dagger$、FiRe-OPD$^\dagger$（共享 100 step 配方的机制移植）。
+$\beta$ 在 231 条 High-Recall holdout 上选为 $0.10$，不当下游评测。
+配置：32 prompt/step，$G=8$，prompt $32768$，response $10240$，lr $10^{-6}$，
+硬件 $8\times 80$GB H800/H100。评测 YaRN scale $4$。
+
+\section{实验结论的因果支撑}
+主表 Avg：4B 上 Raw $29.08$、OPD $39.31$、GC-OPD $\mathbf{40.47}$；
+8B 上 $35.12$、$43.56$、$\mathbf{44.65}$。
+增益集中在 CorpusQA 等证据聚合（中强支撑）。
+信号消融（8B）：再加一份 OPD 仅 $+0.04$；直接加 $\tilde R$ 为 $+0.63$；残差 $\rho$ 为 $+1.10$（强支撑残差设计）。
+Token 分配：Uniform $+0.72$，RACA $+1.10$，Absolute $|A|$ 仅 $+0.38$。
+限制：无多种子；$\beta$ 单任务选；$\dagger$ baseline 非原配方。
+
+\section{复现前置准备清单}
+\begin{itemize}
+\item 数据：\texttt{Kwai-Klear/GoLongRL}；\texttt{scripts/prepare\_golongrl\_32k.py} 应得 $9527/231$。
+\item 权重：Qwen3-4B/8B 与 Qwen3-30B-A3B-Thinking-2507。
+\item 环境：Python 3.12，CUDA 12.8，torch 2.10，vLLM 0.17。
+\item 入口：\texttt{bash scripts/run\_gc\_opd\_4b\_training.sh}；OPD 对照 \texttt{beta=0}。
+\item Sanity：组内 $R$ 全相同则 $\rho=0$。
+\end{itemize}
+
+\section{Paper 与代码缺口 / 开放问题}
+仓库与论文主设定对齐：$\beta=0.10$，核心在 \texttt{verl/trainer/ppo/gc\_opd.py}。
+开放：thinking 学生；与 TGOPD 门叠加时门关则无教师 $s$。
+
+\end{document}

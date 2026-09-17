@@ -1,0 +1,5 @@
+\section{Conclusion}
+
+We introduced \method{} to address teacher--verifier disagreement in long-context OPD. \method{} forms a signed residual between group-normalized verifier rewards and trajectory-level OPD scores, then uses RACA to distribute it across tokens. This preserves dense OPD guidance while supporting binary and graded rewards without cross-task calibration.
+
+Diagnostics reveal stronger disagreement over longer inputs in two tasks and task-dependent prevalence across the training mixture. Across five benchmarks, \method{} improves vanilla OPD from 39.31 to 40.47 for Qwen3-4B and from 43.56 to 44.65 for Qwen3-8B. Ablations identify residual calibration as the main contributor, with an additional gain from RACA over uniform allocation. Overall, \method{} integrates response-level verification with dense token-level guidance.

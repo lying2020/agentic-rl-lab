@@ -1,0 +1,26 @@
+\ifdefined\GCOPDSingleColumnLayout
+\begin{table}[ht]
+\else
+\begin{table*}[ht]
+\fi
+\caption{Token-credit ablation on Qwen3-8B. All residual variants use the same signed residual with $\beta=0.10$ and differ only in token allocation. ``Avg.'' is the unweighted five-task mean, and ``$\Delta$'' is computed from the unrounded average relative to vanilla OPD.}
+\label{tab:token-credit-ablation}
+\centering
+\small
+\setlength{\tabcolsep}{4.0pt}
+\begin{tabular}{l c c c c c c c}
+\toprule
+\bf Token allocation & \bf Avg. & \bf DocMath & \bf Frames & \bf MRCR & \bf CorpusQA & \bf LBv1QA & $\boldsymbol{\Delta}$ \\
+\cmidrule(lr){1-1} \cmidrule(lr){2-8}
+Vanilla OPD & 43.56 & 55.13 & 34.59 & 30.44 & 39.82 & 57.80 & -- \\
+Absolute OPD & 43.93 & 54.63 & 35.56 & 29.53 & 41.34 & 58.60 & $+0.38$ \\
+Uniform & 44.28 & 54.12 & \textbf{37.01} & 30.64 & 40.12 & \textbf{59.50} & $+0.72$ \\
+\cmidrule(lr){1-1} \cmidrule(lr){2-8}
+\textbf{RACA} & \textbf{44.65} & \textbf{55.50} & 34.59 & \textbf{31.10} & \textbf{43.77} & 58.30 & $\mathbf{+1.10}$ \\
+\bottomrule
+\end{tabular}
+\ifdefined\GCOPDSingleColumnLayout
+\end{table}
+\else
+\end{table*}
+\fi

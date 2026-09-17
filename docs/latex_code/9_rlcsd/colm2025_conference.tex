@@ -1,0 +1,202 @@
+ 
+\documentclass{article} % For LaTeX2e
+\PassOptionsToPackage{table}{xcolor}
+\usepackage{colm2025_conference}
+
+\usepackage{microtype}
+\usepackage{hyperref}
+\usepackage{url}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{tabularx}
+\usepackage{enumitem} % 导言区
+
+
+
+% +++==============Extra Envs=================+++
+\usepackage{amssymb} % 
+\usepackage{amsmath} %
+\usepackage{amsfonts} %
+\usepackage{amsthm} %
+% ---==============Extra Envs=================---
+
+% Math commands including \argmax and \argmin
+\input{math_commands}
+
+
+\usepackage{lineno}
+\usepackage{titlesec}
+\usepackage[most]{tcolorbox}
+\usepackage{caption}
+
+\definecolor{darkblue}{rgb}{0, 0, 0.5}
+\definecolor{cleanGreen}{HTML}{15803D}    % 新加，用于 ✓
+\hypersetup{colorlinks=true, citecolor=darkblue, linkcolor=darkblue, urlcolor=darkblue}
+\usepackage{graphicx}
+\usepackage{subcaption}
+\usepackage{colortbl}
+\usepackage{amsmath}
+\usepackage{siunitx}
+\usepackage{pifont} 
+\usepackage{wrapfig}
+\usepackage{fontawesome5}   % 提供 \faGithub 图标
+\usepackage{hyperref}
+
+\definecolor{richpurple}{RGB}{75,46,131}
+\definecolor{beige}{RGB}{245,245,220}
+
+\newcommand{\purplecomic}[1]{%
+  {\color{richpurple}\selectfont #1}%
+}
+\newcommand\eat[1]{}
+
+
+\newcommand{\up}[1]{\textcolor{green!55!black}{#1}}   % 上升：绿
+\newcommand{\dn}[1]{\textcolor{red!75!black}{#1}}     % 下降：红
+\newcommand{\noup}[1]{\textcolor{gray}{#1}}           % 未上升(=0/持平)：灰
+
+\newcommand{\blackcomic}[1]{%
+  {\color{black}\selectfont #1}%
+}
+\renewcommand{\thefootnote}{\fnsymbol{footnote}}
+
+% Theorem environments with tcolorbox styling
+\tcbuselibrary{theorems}
+% Create separate counters for each environment type
+\newcounter{theoremcounter}
+\newcounter{lemmacounter}
+\newcounter{remarkcounter}
+\newcounter{definitioncounter}
+% Set counters to use global numbering (not section-based)
+% This ensures both display and references use global numbering (1, 2, 3, ...)
+\renewcommand{\thetheoremcounter}{\arabic{theoremcounter}}
+\renewcommand{\thelemmacounter}{\arabic{lemmacounter}}
+\renewcommand{\theremarkcounter}{\arabic{remarkcounter}}
+\renewcommand{\thedefinitioncounter}{\arabic{definitioncounter}}
+\newtcbtheorem[use counter=theoremcounter]{theorem}{Theorem}%
+{colback=purple!5!white,colframe=richpurple!80!black,fonttitle=\bfseries}{thm}
+\newtcbtheorem[use counter=lemmacounter]{lemma}{Lemma}%
+{colback=purple!5!white,colframe=richpurple!80!black,fonttitle=\bfseries}{lem}
+\newtcbtheorem[use counter=remarkcounter]{remark}{Remark}%
+{colback=beige,colframe=brown!50!black,fonttitle=\bfseries}{rem}
+\newtcbtheorem[use counter=definitioncounter]{definition}{Definition}%
+{colback=purple!5!white,colframe=richpurple!80!black,fonttitle=\bfseries}{def}
+
+\definecolor{naivered}{HTML}{B91C1C}
+
+% % \title{Formatting Instructions for COLM 2025 \\ Conference Submissions}
+% \title{
+%   % \raisebox{-.29\height}{\includegraphics[width=0.30\textwidth]{figs/ba-title.pdf}}: 
+%   \raisebox{-3.2 mm}{\includegraphics[width=0.04\textwidth]{figs/title-logo.pdf}}: 
+%   An Efficient Self-Evolving Agent System
+% }
+
+\title{
+  \purplecomic{\textbf{RLCSD}}: 
+  \blackcomic{Reinforcement Learning with Contrastive On-Policy Self-Distillation}
+}
+
+% Authors must not appear in the submitted version. They should be hidden
+% as long as the \colmfinalcopy macro remains commented out below.
+% Non-anonymous submissions will be rejected without review.
+
+\author{\textbf{Leyi Pan}$^{1,2}$\footnotemark[1], \;\textbf{Shuchang Tao}$^{2}$, \textbf{Yunpeng Zhai}$^{2}$, \textbf{Lingzhe Zhang}$^{2,3}$, \textbf{Zhaoyang Liu}$^{2}$, \\\textbf{Bolin Ding}$^{2}$, \textbf{Aiwei Liu}$^{1\dagger}$, \textbf{Lijie Wen}$^{1\dagger}$\\
+$^1$Tsinghua University, $^2$Tongyi Lab\includegraphics[height=12pt]{figs/logo.pdf}, Alibaba Group, $^3$Peking University \\\vspace{2pt}
+\texttt{\small panly24@mails.tsinghua.edu.cn, liuaiwei20@gmail.com, wenlj@tsinghua.edu.cn}
+}
+
+
+\newcommand{\fix}{\marginpar{FIX}}
+\newcommand{\new}{\marginpar{NEW}}
+
+\begin{document}
+
+% \ifcolmsubmission
+% \linenumbers
+% \fi
+
+\maketitle
+
+\begingroup
+  \renewcommand\thefootnote{}%
+  \footnotetext{%
+    $^{*}$ This work is done during Leyi Pan's internship at Tongyi Lab, Alibaba Group.\quad
+    $^{\dagger}$ Corresponding authors.%
+  }%
+\endgroup
+\phantomsection
+\vspace{-2em} 
+
+\begin{center}
+\vspace{-1.2em}
+\href{https://github.com/THU-BPM/RLCSD}{\faGithub~\texttt{https://github.com/THU-BPM/RLCSD}}
+\end{center}
+
+\begin{tcolorbox}[
+  colback=blue!5!white,
+  colframe=richpurple!80!black,
+  boxrule=1.5pt,
+  arc=3mm,
+  left=4mm,
+  right=4mm,
+  top=3mm,
+  bottom=3mm,
+  fonttitle=\bfseries,
+  title=\textbf{Abstract}
+]
+On-policy self-distillation (OPSD) provides dense, token-level supervision for reasoning models by aligning a model's own distribution with that under privileged context, typically a verified solution. However, we show that the resulting distributional gap concentrates on style tokens rather than task-bearing ones, as the hinted model tends to produce shorter, more direct outputs. We term this pathology \emph{privilege-induced style drift}, which can destabilize training and shorten responses. To address this, we propose \textbf{RLCSD} (Reinforcement Learning with Contrastive on-policy Self-Distillation), which mitigates this drift by contrasting the teacher-student gap under a correct hint against that under a wrong hint, suppressing style shifts induced by hints regardless of correctness and yielding a signal more concentrated on task-bearing tokens. Experiments on Qwen3 (1.7B/4B/8B) and Olmo-3-7B-Think across mathematical and logical reasoning show that RLCSD consistently outperforms GRPO and prior OPSD methods, with additional results on agentic tasks supporting broader applicability. We further show that the contrastive principle is general: it plugs into existing OPSD methods to improve them, and its underlying insight extends to broader cross-model on-policy distillation.
+\end{tcolorbox}
+
+\begin{figure}[h!]
+\vspace{-5pt}
+  \centering
+  \begin{subfigure}[b]{0.37\textwidth}
+    \includegraphics[width=\textwidth]{figs/panel_a_tokens.pdf}
+    \caption{Top-10 tokens by $|e_c|$ and $|e_{\mathrm{ctr}}|$.}
+    \label{fig:teaser-a}
+  \end{subfigure}\hfill
+  \begin{subfigure}[b]{0.60\textwidth}
+    \includegraphics[width=\textwidth]{figs/panel_b_length.pdf}
+    \caption{Response length and reward over training.}
+    \label{fig:teaser-b}
+  \end{subfigure}
+
+  % \vspace{2pt} 
+
+  \begin{subfigure}[b]{\textwidth}
+    \includegraphics[width=\textwidth]{figs/panel_c_perf.pdf}
+    \caption{Performance comparison across models and benchmarks.}
+    \label{fig:teaser-c}
+  \end{subfigure}
+  \caption{\textbf{RLCSD overview.}
+\textbf{(a) Motivation.} Existing OPSD methods use $|e_c|$ as the optimization signal, which concentrates on style tokens, whereas RLCSD's contrastive signal $|e_{\mathrm{ctr}}|$ shifts the signal toward task-bearing tokens.
+\textbf{(b) Response length and reward over training.} OPSD, SDPO, SRPO, and RLSD exhibit pronounced response length shrinkage during training, with OPSD and SDPO also showing training instability and sharp drops in reward. In contrast, RLCSD remains stable and maintains response length throughout training.
+\textbf{(c) Performance across benchmarks.} RLCSD consistently outperforms GRPO and prior OPSD methods on mathematical and logical reasoning. }
+  \label{fig:teaser}
+  \vspace{-5pt}
+\end{figure}
+
+
+
+
+
+% +=========== Below is main part +====================
+\input{sections/intro}
+\input{sections/related}
+\input{sections/method}
+\input{sections/experiment}
+\input{sections/conclusion}
+% +=========== Above is main part +====================
+
+
+
+
+
+
+\bibliography{colm2025_conference}
+\bibliographystyle{colm2025_conference}
+
+\appendix
+\input{sections/appendix}
+
+\end{document}

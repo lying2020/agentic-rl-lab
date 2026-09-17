@@ -1,0 +1,14 @@
+---
+description: 组会论文 Markdown 必须在 Preview 中渲染公式与 Mermaid 方法图
+globs: docs/**/*.md,paper_assist/**/*.md
+alwaysApply: false
+---
+
+# 组会 / 论文讲解 Markdown Preview
+
+写或改匹配文件时，先读并遵循技能 `paper-group-briefing`（`~/.cursor/skills/paper-group-briefing/SKILL.md`）。
+
+- 公式：只用 `$...$` 与单独成行的 `$$...$$`。禁止 `\begin{equation}`、`\[`、`\(`。
+- 方法：至少一块 ```` ```mermaid ```` 的 `flowchart`（推荐再加 `sequenceDiagram`）。节点内不要写 `$` 公式。
+- 六问结构见该 skill；用户原提示词必须按 skill 原文执行。
+- 写完运行：`python3 ~/.cursor/skills/paper-group-briefing/scripts/check_briefing_md.py <刚写的.md>`

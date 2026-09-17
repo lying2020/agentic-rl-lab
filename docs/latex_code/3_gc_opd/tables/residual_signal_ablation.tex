@@ -1,0 +1,26 @@
+\ifdefined\GCOPDSingleColumnLayout
+\begin{table}[ht]
+\else
+\begin{table*}[ht]
+\fi
+\caption{Response-level signal ablation on Qwen3-8B. All augmented variants use RACA with coefficient $\beta=0.10$ and differ only in whether the added signal is $A^{(i)}_t$, $\tilde{R}^{(i)}$, or $\rho^{(i)}=\tilde{R}^{(i)}-\tilde{s}^{(i)}$. ``Avg.'' is the unweighted five-task mean, and ``$\Delta$'' is computed from the unrounded average relative to vanilla OPD.}
+\label{tab:residual-signal-ablation}
+\centering
+\small
+\setlength{\tabcolsep}{4.0pt}
+\begin{tabular}{l c c c c c c c}
+\toprule
+\bf Variant & \bf Avg. & \bf DocMath & \bf Frames & \bf MRCR & \bf CorpusQA & \bf LBv1QA & $\boldsymbol{\Delta}$ \\
+\cmidrule(lr){1-1} \cmidrule(lr){2-8}
+Vanilla OPD & 43.56 & 55.13 & 34.59 & 30.44 & 39.82 & 57.80 & -- \\
+Additional OPD & 43.60 & 54.63 & 34.59 & 30.03 & 39.51 & 59.20 & $+0.04$ \\
+Direct reward & 44.19 & 55.13 & 34.59 & 30.40 & 40.73 & \textbf{60.10} & $+0.63$ \\
+\cmidrule(lr){1-1} \cmidrule(lr){2-8}
+\textbf{GC-OPD} & \textbf{44.65} & \textbf{55.50} & 34.59 & \textbf{31.10} & \textbf{43.77} & 58.30 & $\mathbf{+1.10}$ \\
+\bottomrule
+\end{tabular}
+\ifdefined\GCOPDSingleColumnLayout
+\end{table}
+\else
+\end{table*}
+\fi

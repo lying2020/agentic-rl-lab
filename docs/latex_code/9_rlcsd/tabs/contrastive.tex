@@ -1,0 +1,33 @@
+\begin{table}[t]
+\centering
+\caption{Contrastive privileged contexts as a plug-in component. For each method, we compare a one-sided construction using a correct reference solution with a contrastive construction that additionally uses an incorrect student rollout for the same query. Math reasoning (AMC23, AIME24, AIME25) is reported as mean@12; Knight-and-Knaves is reported as pass@1, with 4--8 Roles as the in-domain (ID) setting and 9--11 Roles as out-of-domain (OOD) settings. All results use Qwen3-4B; \textbf{bold} marks the best result within each method block, including ties. $\Delta$ denotes the gain of the contrastive construction over its one-sided counterpart.}
+\label{tab:contrast-generality}
+\setlength{\tabcolsep}{4pt}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{ll cccc ccccc}
+\toprule
+& & \multicolumn{4}{c}{\textbf{Math Reasoning} (mean@12)} & \multicolumn{5}{c}{\textbf{Logical Reasoning: Knight-and-Knaves} (pass@1)} \\
+\cmidrule(lr){3-6}\cmidrule(lr){7-11}
+\textbf{Method} & \textbf{Context construction} & AMC23 & AIME24 & AIME25 & Avg. & 4--8 Roles & 9 Roles & 10 Roles & 11 Roles & Avg. \\
+\midrule
+\multirow{3}{*}{OPSD}
+  & One-sided & 89.4 & 73.3 & 65.8 & 76.2 & 73.4 & \textbf{71.0} & \textbf{61.0} & 42.0 & 61.9 \\
+  & Contrastive & \textbf{89.6} & \textbf{75.6} & \textbf{66.4} & \textbf{77.2} & \textbf{74.2} & \textbf{71.0} & \textbf{61.0} & \textbf{45.0} & \textbf{62.8} \\
+\cmidrule(lr){2-11}
+  & $\Delta$ & \up{+0.2} & \up{+2.3} & \up{+0.6} & \up{+1.0} & \up{+0.8} & \noup{0.0} & \noup{0.0} & \up{+3.0} & \up{+0.9} \\
+\midrule
+\multirow{3}{*}{RLSD}
+  & One-sided & 88.9 & 72.5 & 66.1 & 75.8 & 76.0 & \textbf{75.0} & \textbf{67.0} & \textbf{49.0} & 66.8 \\
+  & Contrastive & \textbf{89.8} & \textbf{75.3} & \textbf{66.4} & \textbf{77.2} & \textbf{76.4} & \textbf{75.0} & \textbf{67.0} & \textbf{49.0} & \textbf{66.9} \\
+\cmidrule(lr){2-11}
+  & $\Delta$ & \up{+0.9} & \up{+2.8} & \up{+0.3} & \up{+1.4} & \up{+0.4} & \noup{0.0} & \noup{0.0} & \noup{0.0} & \up{+0.1} \\
+\midrule
+\multirow{3}{*}{RLCSD}
+  & One-sided & 88.9 & 73.1 & 62.5 & 74.8 & 73.8 & 71.0 & 58.0 & 43.0 & 61.5 \\
+  & Contrastive & \textbf{90.8} & \textbf{76.4} & \textbf{68.1} & \textbf{78.4} & \textbf{77.6} & \textbf{76.0} & \textbf{68.0} & \textbf{51.0} & \textbf{68.2} \\
+\cmidrule(lr){2-11}
+  & $\Delta$ & \up{+1.9} & \up{+3.3} & \up{+5.6} & \up{+3.6} & \up{+3.8} & \up{+5.0} & \up{+10.0} & \up{+8.0} & \up{+6.7} \\
+\bottomrule
+\end{tabular}%
+}
+\end{table}

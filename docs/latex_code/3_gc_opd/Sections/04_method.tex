@@ -1,0 +1,74 @@
+\section{Method}
+
+\subsection{Overview}
+
+Group-Calibrated On-Policy Distillation (GC-OPD) calibrates vanilla OPD with response-level verifier feedback while retaining its dense token-level guidance. As illustrated in Figure~\ref{fig:gcopd-overview}, GC-OPD first normalizes verifier rewards and trajectory-level OPD scores within each rollout group, then represents their difference as a signed teacher--verifier disagreement residual. Relative-advantage-based credit assignment (RACA) distributes this trajectory-level residual across tokens according to their relative OPD advantages, and the resulting correction is added to the original token-level OPD advantage.
+
+\subsection{Group-Relative Assessments}
+
+For each response $\mathbf{y}^{(i)}\in\mathcal{G}(\mathbf{x})$, vanilla OPD supplies a token-level OPD advantage $A^{(i)}_t$ for every response token. Equation~\ref{eq:trajectory-opd-score} aggregates these advantages into the trajectory-level OPD score $s^{(i)}$, while the verifier assigns the response a reward $R^{(i)}$. These quantities capture different properties of the response. The trajectory-level OPD score summarizes the teacher's average support relative to the frozen rollout policy, whereas the verifier reward measures verified task outcome.
+
+Since the two signals differ in their raw scales, GC-OPD normalizes them separately within each rollout group. Let $z(\cdot)$ denote within-group z-score normalization, which subtracts the within-group mean and divides by the within-group standard deviation. We define the group-normalized verifier reward and group-normalized trajectory-level OPD score as
+\begin{equation}
+\begin{split}
+\tilde{R}^{(i)} &=z\left (R^{(i)} \right ),\\
+\tilde{s}^{(i)} &=z\left (s^{(i)} \right ).
+\end{split}
+\label{eq:group-relative-signals}
+\end{equation}
+
+Normalizing the two signals separately within each rollout group avoids directly comparing their raw values. For graded verifier rewards, $\tilde{R}^{(i)}$ retains the relative spacing of outcomes within the group. Binary verifier rewards, by contrast, indicate only whether each response succeeds or fails. GC-OPD operates on these group-normalized values rather than their induced rankings alone, allowing the magnitude of graded outcome differences to inform the residual.
+
+\subsection{Teacher--Verifier Disagreement Residual}
+
+Given the group-normalized quantities in Equation~\ref{eq:group-relative-signals}, we define the signed residual as
+\begin{equation}
+\rho^{(i)}=\tilde{R}^{(i)}-\tilde{s}^{(i)}.
+\label{eq:residual}
+\end{equation}
+
+The sign of $\rho^{(i)}$ indicates the direction of teacher--verifier disagreement. A positive value means that the group-normalized verifier reward for response $\mathbf{y}^{(i)}$ exceeds its group-normalized OPD score, whereas a negative value indicates the opposite. Its magnitude reflects the difference between the two group-normalized assessments.
+
+GC-OPD uses this difference instead of directly adding the group-normalized verifier reward. Direct reward addition can reinforce a relative preference already expressed by OPD. In contrast, the residual vanishes when the two group-normalized assessments coincide, while its magnitude grows with their discrepancy. The residual therefore focuses calibration on differences between the verifier and OPD assessments.
+
+The residual also has the desired ordering under a strict disagreement between the verifier and OPD orderings. For two responses $i$ and $j$ in the same rollout group, let $\sigma_R$ and $\sigma_s$ denote the positive within-group standard deviations. If $R^{(i)}>R^{(j)}$ but $s^{(i)}<s^{(j)}$, then
+\begin{equation}
+\rho^{(i)}-\rho^{(j)}
+=
+\frac{R^{(i)}-R^{(j)}}{\sigma_R}
+-
+\frac{s^{(i)}-s^{(j)}}{\sigma_s}
+>0.
+\label{eq:pairwise-residual-direction}
+\end{equation}
+
+Thus, when the verifier prefers response $i$ but OPD prefers response $j$, the residual assigns a larger value to response $i$. Conversely, reversing the two preferences reverses the residual ordering. This verifier-consistent ordering directs the subsequent token-level correction toward the response with the higher verifier reward.
+
+If either signal has a near-zero within-group standard deviation, the corresponding normalization is not well-defined. We therefore set $\rho^{(i)}=0$ for all responses in that group, reducing GC-OPD to vanilla OPD for the group.
+
+\subsection{Relative-Advantage-based Credit Assignment}
+
+The trajectory-level residual specifies the direction and magnitude of calibration for each response, but not how the correction should be distributed across tokens. RACA uses the token-level OPD advantages within each response as the allocation signal. We first normalize each token's OPD advantage relative to the response mean:
+\begin{equation}
+u^{(i)}_t=
+\frac{A^{(i)}_t-s^{(i)}}
+{\sqrt{\frac{1}{T^{(i)}}\sum_{v=1}^{T^{(i)}}
+\left(A^{(i)}_v-s^{(i)}\right)^2+\epsilon}},
+\end{equation}
+where $\epsilon$ is a small positive constant for numerical stability. The resulting relative OPD advantage $u^{(i)}_t$ is positive for tokens whose OPD advantages exceed the response mean and negative for those below it. This normalization preserves the within-response ordering of the signed OPD advantages. Here, $u^{(i)}_t$ serves only as an allocation signal and should not be interpreted as token correctness or causal importance.
+
+RACA maps the relative OPD advantage to a positive, bounded token credit:
+\begin{equation}
+c^{(i)}_t=1+\tanh\left(\frac{u^{(i)}_t}{2}\right).
+\label{eq:raca}
+\end{equation}
+
+This mapping is monotonic and satisfies $c^{(i)}_t\in(0,2)$. Tokens with larger relative OPD advantages therefore receive larger credits, while $u^{(i)}_t=0$ yields unit credit $c^{(i)}_t=1$. Because the credit is always positive, it scales but does not reverse the sign of the trajectory-level residual.
+
+The resulting GC-OPD advantage is
+\begin{equation}
+A'^{(i)}_t=
+A^{(i)}_t+\beta c^{(i)}_t\rho^{(i)},
+\label{eq:gc-opd-advantage}
+\end{equation}
+where $\beta\geq0$ is the residual coefficient that controls the strength of calibration. The original token-level OPD advantage remains the base term, and $\beta c^{(i)}_t\rho^{(i)}$ is the token-level residual correction. GC-OPD substitutes $A'^{(i)}_t$ for $A^{(i)}_t$ in the clipped token-level policy objective described in Section~3.1, changing the advantage construction without modifying the actor objective. Setting $\beta=0$ recovers vanilla OPD. Given the OPD advantages and verifier rewards already produced by the training pipeline, GC-OPD adds only group-level aggregation, normalization, and elementwise token transformations. It requires no additional teacher or student forward pass.

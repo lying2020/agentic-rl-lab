@@ -1,0 +1,5 @@
+\section{Conclusion}
+\label{sec:conclusion}
+
+We studied on-policy self-distillation through the lens of \emph{privilege-induced style drift}, a pathology in which privileged conditioning shifts the token-level learning signal toward stylistic rather than task-bearing tokens. To address this, we proposed RLCSD, which mitigates the drift by contrasting correct and incorrect privileged hints under a shared template, and integrates the resulting signal into RLVR as a verifier-anchored token-level modulation of $A_{\mathrm{ORM}}$. Experiments across Qwen3 and Olmo models on mathematical and logical reasoning, as well as agentic tasks, show that RLCSD consistently outperforms GRPO and prior OPSD methods while maintaining stable training dynamics. Beyond RLCSD itself, our results show that the contrastive principle is general: it improves existing OPSD methods and offers a broader perspective on how token-level distillation signals should be constructed and interpreted in both self-distillation and cross-model OPD.
+

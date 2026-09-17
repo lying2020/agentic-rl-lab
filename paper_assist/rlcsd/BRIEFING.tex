@@ -1,0 +1,122 @@
+\documentclass[11pt,a4paper]{ctexart}
+\usepackage{amsmath,amssymb,mathtools,bm}
+\usepackage{booktabs,longtable,array}
+\usepackage{hyperref}
+\usepackage{geometry}
+\usepackage{verbatim}
+\geometry{margin=2.2cm}
+\title{组会汇报：RLCSD（Contrastive On-Policy Self-Distillation）}
+\author{Paper Read Skill}
+\date{\today}
+\begin{document}
+\maketitle
+\tableofcontents
+\newpage
+
+\noindent\textbf{论文}：Pan et al.
+\textit{RLCSD: Reinforcement Learning with Contrastive On-Policy Self-Distillation}.
+arXiv:2606.11709v1.
+代码：\url{https://github.com/THU-BPM/RLCSD}。
+PDF：\texttt{docs/9.4\_RLCSD.pdf}。
+超参以 PDF 附录 Table~8 为组会主口径。
+
+\section{一句话贡献}
+OPSD 的单侧特权信号 $e_{c,t}$ 会把梯度堆到 style token 上。
+RLCSD 在同一模板下用正确 hint 对 $K$ 条错误 hint 做对比得到 $e_{\mathrm{ctr},t}$，
+squash 后只调制 $A_{\mathrm{ORM}}$ 的幅度，并用 two-path 损失避免被未选中 token 稀释。
+
+\section{任务定义与动机剖析}
+
+\subsection{任务}
+特权上下文自蒸馏：师生同一模型，教师多看参考解答。Thinking 模式。
+Qwen3-1.7B/4B/8B 与 Olmo-3-7B-Think。
+数学：DeepMath 分难度；AMC23/AIME24/AIME25 的 mean@12。
+逻辑：Knights \& Knaves，ID 4--8 与 OOD 9/10/11 的 pass@1。
+
+\subsection{问题与动机}
+\begin{equation}
+e_{c,t}=\log\pi_T(y_t\mid x,y_c^\ast,y_{<t})-\log\pi_S(y_t\mid x,y_{<t}).
+\end{equation}
+特权会锐化任务 token，也带来更短、更武断、少探索的文风，称为 privilege-induced style drift。
+数学上 $|e_c|$ 的 style 均值 $0.263$ 对 task $0.083$。
+OPSD/SDPO/SRPO 出现熵与长度爆炸；RLSD 出现数学长度收缩。
+
+\subsection{现有局限}
+上述 OPSD 变体都只用单侧正特权。GRPO 稳定但 token 信用稀疏。
+RLSD 虽用 $A_{\mathrm{ORM}}$ 定方向，幅度仍被 style 污染。
+
+\subsection{例子}
+token \texttt{Wait} 在正确与错误 hint 下都因“干脆风格”被打压，相减后 style 对消，
+$|e_{\mathrm{ctr}}|$ 的 top token 更多是 \texttt{3}/\texttt{sqrt}/\texttt{factor}。
+单条误差类型不匹配的负 hint 会使 $e_{\mathrm{ctr}}$ 符号随机，故需 $K$-marginalize。
+
+\section{方法论树状拆解}
+\begin{verbatim}
+RLCSD
+|-- Stage1 采样 G=8，划分 G+/G-，算 A_ORM
+|-- Stage2 正 hint（主实验 GT CoT）vs K=4 负 sibling
+|     同模板；排除当前 y
+|     ectr = log piT(yc*) - log( (1/K) sum piT(yw,k*) )
+`-- Stage3 rt=lambda tanh(ectr/tau); mask; sign clamp; two-path PPO
+\end{verbatim}
+
+\section{算法流程与公式细节推演}
+最终对比信号（paper Eq.~(7)），先对负支概率平均再取对数：
+\begin{equation}
+e_{\mathrm{ctr},t}
+=\log\pi_T(y_t\mid x,y_c^\ast,y_{<t})
+-\log\Big(\frac1K\sum_{k=1}^K\pi_T(y_t\mid x,y_{w,k}^\ast,y_{<t})\Big).
+\end{equation}
+调制（paper Eq.~(9)--(11)）：
+\begin{align}
+r_t&=\lambda\tanh(e_{\mathrm{ctr},t}/\tau),\\
+m_t&=\mathbf{1}(|r_t|>\delta),\\
+\tilde A_t
+&=\begin{cases}
+\max(0,A_{\mathrm{ORM}}+r_t) & A_{\mathrm{ORM}}\ge 0,\\
+\min(0,A_{\mathrm{ORM}}+r_t) & A_{\mathrm{ORM}}<0.
+\end{cases}
+\end{align}
+PDF 口径：$\tau=0.02$，$\lambda=0.5$，$\delta=0.02$，$\eta=1.0$，$K=4$。
+Two-path（paper Eq.~(15)）对未调制集 $U$ 与调制集 $M$ 分别平均，
+否则 $20\%$--$30\%$ 的 $M$ 会被全局平均稀释。
+
+手算：$A_{\mathrm{ORM}}=+1$，$e_{\mathrm{ctr}}=0.04$，
+则 $r=0.5\tanh(2)\approx0.482$，$\tilde A=1.482$。
+若 $e_{\mathrm{ctr}}$ 极负，clamp 仍保持 $\tilde A\ge0$。
+
+\section{实验设定与资源开销}
+对照 GRPO、OPSD、SDPO、SRPO、RLSD。
+$8\times$H20 全参，veRL+FSDP2+vLLM。
+$G=8$，train 最大 $16384$，eval $38912$。
+数学 lr $1\times10^{-6}$；逻辑 RLCSD 用 $5\times10^{-6}$，其它方法用 $1\times10^{-6}$（不完全对齐）。
+教师：RLCSD 每 $10$ step snapshot。
+4B 数学 step time（Table~9）：RLCSD 总 $891.55$s，教师 logprob $14.21$s，
+快于 OPSD/SDPO/SRPO 的 dense 蒸馏。
+
+\section{实验结论的因果支撑}
+主表几乎全列最优。Qwen3-8B：Math Avg $79.3$，KK Avg $74.0$（Base 为 $76.6/59.6$）。
+OOD 11-role 相对 Base $+21.0$。
+训练曲线：RLCSD 接近 GRPO 的稳定，且验证更好（强支撑）。
+插件实验：单侧换 GT$\to$self 几乎不变；加上 contrast 普遍提升；
+去掉 contrast 的 RLCSD 掉点最大。
+组件消融：去掉 $A_{\mathrm{ORM}}$ 锚定跌得最多；
+附录 A 显示 dissimilar 负 hint 的 wrong-sign 约 $51\%$，$K$-marginal 后 $<8\%$。
+外部 OPD 诊断：更强但文风远的 Instruct 教师蒸馏更差。
+限制：逻辑 lr 不对齐；无多种子；README 数字/超参与 PDF 不完全一致。
+
+\section{复现前置准备清单}
+\begin{itemize}
+\item 数据：\texttt{python scripts/download\_data.py --all}（\texttt{Leyiii/RLCSD}）。
+\item 权重：Qwen3 与 Olmo-3-7B-Think。
+\item 硬件：论文 $8\times$H20。
+\item 配置按 PDF：$\tau=0.02,\eta=1.0$，snapshot 每 $10$ step。
+\item Sanity：$A_{\mathrm{ORM}}>0$ 时 $\tilde A$ 不得为负；空 $G^+$ 或 $G^-$ 应 skip。
+\end{itemize}
+
+\section{Paper 与代码缺口 / 开放问题}
+PDF Table~8 与 GitHub README 在教师是否固定、$\tau/\eta$、主表数字上不一致。
+损失注册于 \texttt{core\_algos.py} 的 \texttt{rlcsd}。
+开放：逻辑表的 lr 公平性；把 task/style 诊断做成训练门。
+
+\end{document}

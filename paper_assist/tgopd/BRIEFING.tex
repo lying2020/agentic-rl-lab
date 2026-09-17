@@ -1,0 +1,134 @@
+\documentclass[11pt,a4paper]{ctexart}
+\usepackage{amsmath,amssymb,mathtools,bm}
+\usepackage{booktabs,longtable,array}
+\usepackage{hyperref}
+\usepackage{geometry}
+\usepackage{verbatim}
+\geometry{margin=2.2cm}
+\title{组会汇报：TGOPD（Verify Before You Distill）}
+\author{Paper Read Skill}
+\date{\today}
+\begin{document}
+\maketitle
+\tableofcontents
+\newpage
+
+\noindent\textbf{论文}：AllSpark Team.
+\textit{Verify Before You Distill: Prompt-Level Teacher Gating for On-Policy Distillation}.
+arXiv:2609.02998v1.
+PDF：\texttt{docs/7\_TGOPD.pdf}。
+框架：slime 异步栈。截至整理时未见官方代码仓。
+
+\section{一句话贡献}
+Vanilla OPD 对每个 prompt 无条件使用教师 token 级 reverse-KL。
+TGOPD 先用 $K_T=3$ 次教师探针与验证器 pass rate 做 prompt 级可靠性审计：
+通过则走稠密 OPD，否则撤回教师、改走验证器 grounding 的 GRPO。
+门是硬路由而不是插值。
+
+\section{任务定义与动机剖析}
+
+\subsection{任务}
+后训练 On-Policy Distillation：学生 $\pi_\theta$ 自己采样，冻结域专家教师 $\pi_T$ 给 token 级 reverse-KL。
+学生为 Qwen3.5-4B 与 Qwen3.6-35B-A3B；域为数学、代码、指令遵循。
+教师由同一基座 GRPO 得到后冻结。
+另有 MOPD：单学生三域，prompt 先路由域教师再套门。
+
+\subsection{问题与动机}
+Reverse KL 是 mode-seeking：教师在某题上自信地错，会把学生强推到错误模式。
+熵或师生 likelihood 一致测的是不确定，不是对错。
+异步部署中教师只做 scoring forward，必须等学生 decode，4B 单域教师节点利用率仅 $9.8\%$，
+$59\%$ 时间低于 $5\%$。
+动机：用空窗生成探针，用验证器得到 $q_T(x)$，再决定是否准入稠密 OPD。
+
+诊断（每 prompt 10 条离线教师样本）：代码域自信 AUROC $0.51$，数学 $0.73$；
+低可靠性区教师最高自信样本仍错（代码 $84\%$，数学 $61\%$）。
+
+\subsection{现有局限}
+EOPD / TrOPD / REOPOLD 停在分布侧；RG-OPD / SPOT 做轨迹或 token 局部筛选；
+RLSD-style 对所有 prompt 削弱教师；MOPD 按域路由后仍无条件使用稠密奖励。
+
+\subsection{例子}
+三次探针奖励 $(0,0,1)$ 则 $q_T=1/3<\tau=2/3$，门关，即使教师对错误 token 的 $\log\pi_T$ 很高也不进梯度。
+学生 $1$ 对 $3$ 错时 GRPO 仍给相对更好的轨迹正优势。
+三次探针 $2$ 过则整段走 OPD，验证器不进该 prompt 的梯度。
+
+\section{方法论树状拆解}
+创新在 prompt 级硬路由与空窗探针，不在 OPD/GRPO 公式本身。
+\begin{verbatim}
+TGOPD
+|-- A 教师可靠性探针（填空窗）
+|     RT(x)=E[r]; qT = KT 次 pass 均值; KT=3, tau=2/3
+|-- B 硬门 g=1[qT >= tau]
+|     开: token A_OPD; 关: 轨迹 A_GRPO（无 std 归一）
+`-- C PPO-clip；IcePop/TIS 为异步共享修正
+\end{verbatim}
+
+\section{算法流程与公式细节推演}
+
+OPD 优势（paper Eq.~(1)）与验证器无关：
+\begin{equation}
+\hat A^{\mathrm{OPD}}_{i,t}
+=\beta\,\mathrm{sg}\Big[\log\pi_T(y_i^t\mid x,y_i^{<t})
+-\log\pi_\theta(y_i^t\mid x,y_i^{<t})\Big].
+\end{equation}
+GRPO 组内均值中心化、广播到所有 token（paper Eq.~(2)）：
+\begin{equation}
+\hat A^{\mathrm{GRPO}}_i
+=r(x,y_i)-\frac1G\sum_{j=1}^G r(x,y_j),\qquad
+\hat A^{\mathrm{GRPO}}_{i,t}=\hat A^{\mathrm{GRPO}}_i.
+\end{equation}
+可靠性与门（paper Eq.~(3)--(5)）：
+\begin{align}
+R_T(x)&=\mathbb{E}_{y\sim\pi_T}[r(x,y)],\\
+q_T(x)&=\frac1{K_T}\sum_{k=1}^{K_T}r(x,\hat y_k),\qquad
+g(x)=\mathbf{1}[q_T(x)\ge\tau].
+\end{align}
+选择器而非插值（paper Eq.~(6)）：
+\begin{equation}
+\hat A^{\mathrm{TGOPD}}_{i,t}
+=g(x)\,\hat A^{\mathrm{OPD}}_{i,t}
++\big(1-g(x)\big)\,\hat A^{\mathrm{GRPO}}_{i,t}.
+\end{equation}
+再进入 PPO-clip（paper Eq.~(7)）。
+$K_T q_T\sim\mathrm{Binomial}(K_T,R_T)$，估计无偏。
+组内奖励全相同则 GRPO 优势为 $0$。
+
+手算：$G=4,K_T=3,\tau=2/3$。
+门开时 $\log\pi_T-\log\pi_S=0.8$ 则该 token 优势为 $0.8$。
+门关且学生奖励 $(1,0,0,0)$ 则优势 $(+0.75,-0.25,-0.25,-0.25)$ 广播。
+
+35B CodeIO 对齐 $500$ cycle：平均 step time $+5.9\%$，decode 吞吐变化 $<0.1\%$。
+空闲填满不等于零墙钟。
+
+\section{实验设定与资源开销}
+对照：Vanilla OPD、TrOPD、RG-OPD、RLSD-style（外部冻结教师缩放幅度）。
+数据：DAPO-Math-17K；CodeI/O；Nemotron-Cascade~2 过滤 IF。
+评测：AIME 2025/2026 avg@64，HMMT-Feb avg@32，LCB pass@1 avg@6，OJBench，IFBench/IFEval。
+超参：rollout batch $64$，$G=4$，update batch $128$，lr $1\times10^{-6}$，PPO $\epsilon=0.2$，
+数学最大回复 $16384$。
+硬件：4B 为 $5\times8$ GPU；35B 为 $7\times8$ GPU。
+4B SOPD 教师利用率 $9.8\%\to78.9\%$，集群 $51.5\%\to69.5\%$。
+
+\section{实验结论的因果支撑}
+全部六个单域设定 TGOPD 优于 Vanilla OPD，代码增益最大，与自信最不能预测对错一致（强支撑）。
+35B LCB 上其它蒸馏方法负迁移，仅 TGOPD 正迁移并超过教师。
+RLSD-style 在 $14$ 列中 $8$ 列低于 base：均匀削弱教师有害（强支撑）。
+MOPD 七基准平均 4B $53.40\to54.54$，35B $60.99\to61.94$（中强支撑）。
+$\tau$ sweep 呈倒 U，峰在 $3/5$，靠近默认 $2/3$。
+关门后 mask 已能解释约 $90\%$ 增益，GRPO fallback 额外一点。
+限制：无多种子；必须有自动验证器；门为二值。
+
+\section{复现前置准备清单}
+\begin{itemize}
+\item 数据：DAPO-Math-17K、CodeI/O、过滤后的 Cascade IF。
+\item 权重：Qwen3.5-4B / Qwen3.6-35B-A3B；三域 GRPO 教师需自训。
+\item 硬件：完整 4B SOPD 约 $40$ 张 $80$GB 级卡；无官方仓。
+\item 必做：探针 $q_T$、硬门、OPD/GRPO 互斥、GRPO 无 std 归一。
+\item Sanity：$\tau=0$ 接近 Vanilla OPD；常数组奖励时 $g=0$ 梯度为 $0$。
+\end{itemize}
+
+\section{Paper 与代码缺口 / 开放问题}
+无官方代码与 TeX 仓。$\beta$ 未扫。IcePop 不是方法贡献。
+开放：软门、无验证器任务、按域切换关门策略。
+
+\end{document}

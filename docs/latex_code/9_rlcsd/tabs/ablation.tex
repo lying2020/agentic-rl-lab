@@ -1,0 +1,21 @@
+\begin{table}[t]
+\centering
+\caption{Ablation of key design choices in RLCSD (Qwen3-4B). Each variant removes a single component from the full method. Math reasoning (AMC23, AIME24, AIME25) is reported as mean@12; Knight-and-Knaves (pass@1) uses roles 4--8 as in-domain (ID) and roles 9/10/11 as out-of-domain (OOD). Bold marks the best result in each column.}
+\label{tab:ablation}
+\small
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lccccccccc}
+\toprule
+& \multicolumn{4}{c}{Math Reasoning (mean@12)} & \multicolumn{5}{c}{Logical Reasoning: Knight-and-Knaves (pass@1)} \\
+\cmidrule(lr){2-5} \cmidrule(lr){6-10}
+Method & AMC23 & AIME24 & AIME25 & Avg. & 4--8 Roles & 9 Roles & 10 Roles & 11 Roles & Avg. \\
+\midrule
+RLCSD (full) & \textbf{90.8} & \textbf{76.4} & \textbf{68.1} & \textbf{78.4} & \textbf{77.6} & \textbf{76.0} & \textbf{68.0} & \textbf{51.0} & \textbf{68.2} \\
+$-$ $K$-marginal negative hint & 89.3 & 73.2 & 67.8 & 76.8 & 76.4 & 71.0 & 63.0 & 47.0 & 64.4 \\
+$+$ target rollout in hint pool & 89.1 & 73.4 & 68.0 & 76.8 & 75.8 & 70.0 & 63.0 & 46.0 & 63.7 \\
+$-$ $A_{\mathrm{ORM}}$ anchoring & 88.6 & 72.1 & 66.3 & 75.7 & 74.6 & 69.0 & 61.0 & 45.0 & 62.4 \\
+$-$ two-path loss aggregation & 89.0 & 73.1 & 67.2 & 76.4 & 75.6 & 70.0 & 62.0 & 46.0 & 63.4 \\
+\bottomrule
+\end{tabular}
+}
+\end{table}

@@ -1,0 +1,63 @@
+\section{Background and Motivation}
+
+\subsection{On-Policy Distillation}
+
+Let $\mathbf{x}$ denote a long-context input and $\pi_\theta$ the trainable student policy. At the beginning of each update, $\pi_{\theta_{\mathrm{old}}}$ denotes a frozen copy of $\pi_\theta$ used to generate the current rollouts. For each input, we sample a rollout group of $G$ responses, $\mathcal{G}(\mathbf{x})=\{\mathbf{y}^{(i)}\}_{i=1}^{G}$, from $\pi_{\theta_{\mathrm{old}}}$, where $\mathbf{y}^{(i)}=(y^{(i)}_1,\ldots,y^{(i)}_{T^{(i)}})$ has length $T^{(i)}$.
+
+Let $\pi_T$ denote the teacher policy. For each response sampled from $\pi_{\theta_{\mathrm{old}}}$, vanilla OPD defines the token-level advantage of $y_t^{(i)}$ as
+\begin{equation}
+\begin{aligned}
+A^{(i)}_t={}&
+\log \pi_T(y^{(i)}_t \mid \mathbf{x},\mathbf{y}^{(i)}_{<t})\\
+&-\log \pi_{\theta_{\mathrm{old}}}(y^{(i)}_t \mid \mathbf{x},\mathbf{y}^{(i)}_{<t}).
+\end{aligned}
+\label{eq:opd-token-advantage}
+\end{equation}
+
+Let $h_t^{(i)}=(\mathbf{x},\mathbf{y}^{(i)}_{<t})$ denote the input and response prefix at position $t$. Taking the expectation over a token sampled from the frozen rollout policy gives
+\begin{equation}
+\mathbb{E}_{y_t^{(i)}\sim\pi_{\theta_{\mathrm{old}}}(\cdot\mid h_t^{(i)})}
+\!\left[A_t^{(i)}\right]
+=
+-\mathrm{KL}\!\left(
+\pi_{\theta_{\mathrm{old}}}(\cdot\mid h_t^{(i)})\Vert\pi_T(\cdot\mid h_t^{(i)})
+\right).
+\label{eq:opd-reverse-kl}
+\end{equation}
+Thus, $A_t^{(i)}$ is a sampled-token contribution whose expectation equals the negative reverse KL~\citep{gu2024minillm,zhao2026poweropd}. A positive value indicates greater teacher than student support for the sampled token, whereas a negative value indicates the converse. The signal is dense but reflects teacher preference rather than verified task outcome.
+
+During actor optimization, $A_t^{(i)}$ is treated as fixed and weights the clipped token-level objective for $\pi_\theta$, whose importance ratio is computed relative to $\pi_{\theta_{\mathrm{old}}}$. Positive advantages increase the probability of sampled tokens, whereas negative advantages decrease it.
+
+\subsection{Teacher--Verifier Disagreement in Long-Context OPD}
+\label{sec:obs}
+
+A task-specific verifier assigns each response a reward $R^{(i)}$, which may encode binary correctness or graded partial success. To compare this response-level outcome feedback with token-level OPD guidance, we aggregate the token-level advantages into a trajectory-level OPD score:
+\begin{equation}
+s^{(i)}=\frac{1}{T^{(i)}}\sum_{t=1}^{T^{(i)}}A^{(i)}_t.
+\label{eq:trajectory-opd-score}
+\end{equation}
+Averaging avoids direct scaling with response length and summarizes the teacher's mean support for the response relative to the frozen rollout policy.
+
+The trajectory-level OPD score and verifier reward assess different properties of the same response. The former summarizes teacher support relative to the frozen rollout policy, whereas the latter measures verified task outcome. Their orderings within a rollout group can therefore disagree: a response with a higher OPD score may receive a lower verifier reward than another response. We refer to such discrepancies as \emph{teacher--verifier disagreement}. This disagreement is particularly consequential in long-context OPD, where task success can depend on aggregating evidence distributed across distant positions. In this setting, token-level teacher support may favor a locally plausible response even when it omits evidence required by the verifier. Because the two signals also differ in numerical scale, we characterize their agreement through relative comparisons within each rollout group rather than their raw values.
+
+We examine how teacher--verifier disagreement varies with prompt length using a fixed set of generated responses from Multi-Table Extraction and High-Recall Retrieval in GoLongRL~\citep{lv2026golongrl}. Both tasks require aggregating evidence distributed across the input and use graded verifier rewards. The analysis covers 751 Multi-Table prompts and 2{,}908 High-Recall prompts across three prompt-length ranges below 64K tokens. We use Qwen3-8B as the student and Qwen3-30B-A3B-Thinking-2507 as the teacher. We extend the student's context window with YaRN using a scaling factor of 4~\citep{peng2024yarn}, while the teacher uses its native context window. For each prompt, the student generates eight responses, the teacher supplies the token-level log-probabilities used to compute $s^{(i)}$, and the task-specific verifier assigns $R^{(i)}$.
+
+For a prompt $\mathbf{x}$, let $\mathcal{P}(\mathbf{x})=\{(i,j):R^{(i)}>R^{(j)}\}$ contain all response pairs with distinct verifier rewards, oriented toward the higher-reward response. We normalize the trajectory-level OPD scores to zero mean and unit variance within the rollout group and denote them by $\tilde{s}^{(i)}$. Let $\mathbb{I}(\cdot)$ denote the indicator function. The pairwise disagreement rate is
+\begin{equation}
+d_{\mathrm{pair}}(\mathbf{x})=
+\frac{1}{|\mathcal{P}(\mathbf{x})|}
+\sum_{(i,j)\in\mathcal{P}(\mathbf{x})}
+\mathbb{I}(\tilde{s}^{(i)}<\tilde{s}^{(j)}),
+\label{eq:pairwise-disagreement}
+\end{equation}
+and the OPD preference gap is
+\begin{equation}
+g_{\mathrm{OPD}}(\mathbf{x})=
+\frac{1}{|\mathcal{P}(\mathbf{x})|}
+\sum_{(i,j)\in\mathcal{P}(\mathbf{x})}
+(\tilde{s}^{(i)}-\tilde{s}^{(j)}).
+\label{eq:opd-preference-gap}
+\end{equation}
+The first metric measures how often the OPD ordering disagrees with the verifier ordering. The second captures the direction and magnitude of OPD preference along the verifier ordering, measured in units of the within-group OPD standard deviation. Positive gaps indicate agreement with the verifier ordering, whereas negative gaps indicate greater OPD support for lower-reward responses. We macro-average both metrics over prompts whose eight responses contain at least two distinct verifier rewards.
+
+Figure~\ref{fig:teacher-verifier-motivation} shows that the pairwise disagreement rate increases over longer prompt-length ranges in both tasks, while the OPD preference gap declines from positive to negative. For Multi-Table Extraction, the disagreement rate rises from 40.6\% below 8K to 64.0\% at 32--64K, and the preference gap declines from $+0.35$ to $-0.37$. For High-Recall Retrieval, the corresponding values change from 35.2\% to 60.2\% and from $+0.65$ to $-0.35$. Within these two tasks, the consistent trends indicate that longer inputs can amplify teacher--verifier disagreement, motivating verifier-based calibration of dense OPD guidance.

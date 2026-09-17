@@ -1,0 +1,42 @@
+\ifdefined\GCOPDSingleColumnLayout
+\begin{table}[t]
+\else
+\begin{table*}[t]
+\fi
+\caption{Qwen3-4B and Qwen3-8B results on five long-context benchmarks (\%). ``Avg.'' is the unweighted five-task mean. $\dagger$ denotes an implementation of the method's principal training-signal mechanism under the shared setup.}
+\label{tab:main-results}
+\centering
+\small
+\setlength{\tabcolsep}{4.0pt}
+\begin{tabular}{l l c c c c c c }
+\toprule
+\multirow{2}{*}{\bf Model} & \multirow{2}{*}{\bf Method} & \multicolumn{6}{c}{\bf Benchmark} \\
+\cmidrule(lr){3-8}
+& & \bf Avg. & \bf DocMath & \bf Frames & \bf MRCR & \bf CorpusQA & \bf LBv1QA \\
+\cmidrule(lr){1-2} \cmidrule(lr){3-8}
+\multirow{7}{*}{Qwen3-4B}
+& Raw & 29.08 & 43.63 & 26.58 & 22.02 & 6.99 & 46.20 \\
+& OPD & 39.31 & 49.37 & \underline{30.95} & 26.90 & 32.22 & \textbf{57.10} \\
+& ExOPD$^{\dagger}$ & 38.22 & 47.75 & 29.61 & 25.95 & 31.91 & 55.90 \\
+& Uni-OPD$^{\dagger}$ & 38.53 & \textbf{51.88} & 29.98 & 27.93 & 27.36 & 55.50 \\
+& PowerOPD$^{\dagger}$ & 38.88 & 49.63 & 30.10 & \textbf{28.36} & \underline{32.52} & 53.80 \\
+& FiRe-OPD$^{\dagger}$ & \underline{39.50} & 49.37 & \textbf{31.31} & \underline{28.20} & \underline{32.52} & \underline{56.10} \\
+\cmidrule(lr){2-2} \cmidrule(lr){3-8}
+& \textbf{\method{} (ours)} & \textbf{40.47} & \underline{50.38} & 30.34 & 27.82 & \textbf{37.99} & 55.80 \\
+\cmidrule(lr){1-2} \cmidrule(lr){3-8}
+\multirow{7}{*}{Qwen3-8B}
+& Raw & 35.12 & 45.88 & 30.95 & 23.87 & 22.19 & 52.70 \\
+& OPD & 43.56 & \underline{55.13} & \textbf{34.59} & 30.44 & 39.82 & 57.80 \\
+& PowerOPD$^{\dagger}$ & 41.53 & 51.38 & 32.65 & \underline{31.65} & 37.39 & 54.60 \\
+& Uni-OPD$^{\dagger}$ & 43.41 & 54.13 & \textbf{34.59} & 25.25 & \underline{42.86} & \underline{60.20} \\
+& ExOPD$^{\dagger}$ & 43.49 & 53.12 & 33.50 & \textbf{32.73} & 37.69 & \textbf{60.40} \\
+& FiRe-OPD$^{\dagger}$ & \underline{44.01} & 54.00 & \underline{34.34} & 30.96 & 41.64 & 59.10 \\
+\cmidrule(lr){2-2} \cmidrule(lr){3-8}
+& \textbf{\method{} (ours)} & \textbf{44.65} & \textbf{55.50} & \textbf{34.59} & 31.10 & \textbf{43.77} & 58.30 \\
+\bottomrule
+\end{tabular}
+\ifdefined\GCOPDSingleColumnLayout
+\end{table}
+\else
+\end{table*}
+\fi
