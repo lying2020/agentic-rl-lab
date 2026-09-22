@@ -129,17 +129,27 @@ $$
 ## 2.2 总览：三个模块怎么交接
 
 ```mermaid
-flowchart TB
-  X["题 x + 特权解 c"] --> S["学生 pi_theta 只看 x<br/>on-policy 采样 y"]
-  X --> T["特权教师 pT 看 x,c<br/>通常是冻结初始权重"]
+flowchart TD
+  subgraph inputs [Inputs]
+    X[题和特权解]
+    Ref[参考端点 stopgrad学生]
+  end
+  subgraph modA [ModuleA]
+    Mix[线性课程加logit插值]
+  end
+  subgraph modB [ModuleB]
+    Rho[token mismatch]
+    Gt[折现ReturnToGo]
+  end
+  X --> S[学生on-policy采样]
+  X --> T[冻结特权教师]
   S --> Mix
   T --> Mix
-  Ref["参考端点 pi_ref<br/>默认 sg 当前学生"] --> Mix
-  Mix["模块 A 目标构造<br/>wk=1/beta_k 线性课程<br/>logit 插值后 softmax 得 ptilde"]
-  Mix --> Rho["token mismatch rho_t"]
-  Rho --> B["模块 B Return-to-go<br/>折现后缀和 Gt<br/>gamma=0.99 且 stopgrad G"]
-  B --> Loss["加权 logprob 损失<br/>只反传学生 logprob"]
-  Loss --> Up["更新 LoRA 学生"]
+  Ref --> Mix
+  Mix --> Rho
+  Rho --> Gt
+  Gt --> Loss[加权logprob损失]
+  Loss --> Up[更新LoRA学生]
 ```
 
 节点对应公式：

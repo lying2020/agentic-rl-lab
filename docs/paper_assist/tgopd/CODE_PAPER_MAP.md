@@ -21,20 +21,20 @@
 
 ```mermaid
 flowchart TD
-  X[prompt x] --> S[学生 rollout 节点<br/>G=4 decode]
-  X --> Tprobe[教师节点空窗<br/>KT=3 probe decode]
-  Tprobe --> V1[验证器打探针]
+  X[prompt x] --> S[student rollout G=4]
+  X --> Tprobe[teacher idle window KT=3 probes]
+  Tprobe --> V1[verifier scores probes]
   V1 --> Q["qT = mean r"]
-  Q --> G{"qT ≥ τ ?"}
-  S --> Tscore[教师 scoring forward<br/>无条件]
-  S --> V2[验证器打学生]
+  Q --> G{"qT >= tau"}
+  S --> Tscore[teacher scoring forward]
+  S --> V2[verifier scores student]
   Tscore --> Aopd["A_OPD token log-ratio Eq.1"]
-  V2 --> Agrpo["A_GRPO 组内中心化 Eq.2"]
-  G -->|是| Aopd
-  G -->|否| Agrpo
+  V2 --> Agrpo["A_GRPO group-centered Eq.2"]
+  G -->|yes| Aopd
+  G -->|no| Agrpo
   Aopd --> PPO[PPO-clip Eq.7]
   Agrpo --> PPO
-  PPO --> Upd[更新 πθ]
+  PPO --> Upd[update student]
 ```
 
 ## 一时序：一个异步 cycle
@@ -46,28 +46,30 @@ sequenceDiagram
   participant V as Verifier
   participant U as Trainer
   R->>R: decode G student rollouts
-  par 填教师空窗
+  par fill teacher idle window
     T->>T: decode KT probes
   end
   T->>V: score probes
-  V-->>U: qT(x)
+  V-->>U: qT of x
   R->>T: student tokens for scoring
-  T-->>U: log πT
+  T-->>U: log piT
   R->>V: student rollouts
-  V-->>U: r(x,yi)
-  U->>U: g=1[qT≥τ]; select A
-  U->>U: PPO-clip + IcePop
+  V-->>U: student rewards
+  U->>U: gate qT vs tau then select A
+  U->>U: PPO-clip and IcePop
 ```
+
+门控对应 $g(x)=1[q_T(x)\ge\tau]$，选 $A_{\mathrm{OPD}}$ 或 $A_{\mathrm{GRPO}}$。
 
 ## 调用流（应实现）
 
 ```mermaid
 flowchart TD
-  A[cycle start] --> B[concurrent student decode + teacher probes]
-  B --> C["qT = mean verifier(probes)"]
+  A[cycle start] --> B[concurrent student decode and teacher probes]
+  B --> C["qT = mean verifier probes"]
   C --> D[teacher logprob on student tokens]
   D --> E[verifier on student]
-  E --> F{"g(x)"}
+  E --> F{"gate g of x"}
   F -->|1| G["A = A_OPD Eq.1"]
   F -->|0| H["A = A_GRPO Eq.2"]
   G --> I[PPO-clip Eq.7]
