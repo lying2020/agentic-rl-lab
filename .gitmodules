@@ -44,3 +44,21 @@
 [submodule "tools/SwanLab-Skill"]
 	path = tools/SwanLab-Skill
 	url = https://github.com/SwanHubX/SwanLab-Skill.git
+[submodule "algorithm/FlowBalance"]
+	path = algorithm/FlowBalance
+	url = https://github.com/lying2020/FlowBalance.git
+[submodule "algorithm/SPOT"]
+	path = algorithm/SPOT
+	url = https://github.com/QuZikun/SPOT.git
+[submodule "algorithm/GC-OPD"]
+	path = algorithm/GC-OPD
+	url = https://github.com/SolereZhang/GC-OPD.git
+[submodule "algorithm/AntiSD"]
+	path = algorithm/AntiSD
+	url = https://github.com/FloyedShen/AntiSD.git
+[submodule "algorithm/TrOPD"]
+	path = algorithm/TrOPD
+	url = https://github.com/Xingrun-Xing2/TrOPD.git
+[submodule "algorithm/beta-opsd"]
+	path = algorithm/beta-opsd
+	url = https://github.com/lying2020/beta-opsd.git
