@@ -5,7 +5,10 @@ __pycache__/
 
 # C extensions
 *.so
-.cursor
+# Cursor：只入库项目 skill 和 rule，其余本地状态忽略
+.cursor/*
+!.cursor/skills/
+!.cursor/rules/
 
 data
 # Distribution / packaging
