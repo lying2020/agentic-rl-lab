@@ -22,7 +22,7 @@
 python3 .cursor/skills/paper-group-briefing/scripts/check_briefing_md.py docs/paper_assist/<slug>/BRIEFING.md
 ```
 
-注意：`.gitignore` 忽略了 `.cursor`，新增 skill / rule 文件要用 `git add -f` 才能入库。
+换电脑：skill 和 rule 随仓库同步，`git clone` 后用 Cursor 打开仓库即可直接使用，无需拷贝到 `~/.cursor/skills/`。`.gitignore` 只放行 `.cursor/skills/` 与 `.cursor/rules/`，新增 skill 正常 `git add` 即可。
 
 ## 对照总稿
 
