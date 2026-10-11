@@ -2,7 +2,29 @@
 
 默认目录：**`docs/paper_assist/<slug>/`**（不要写到仓库根 `paper_assist/`）。
 
-对照总稿：
+## 写作规范：`paper-group-briefing` skill
+
+本目录的精讲稿都按仓库内的 Cursor skill 写成，文件在 [`.cursor/skills/paper-group-briefing/`](../../.cursor/skills/paper-group-briefing/)：
+
+| 文件 | 作用 |
+|---|---|
+| `SKILL.md` | 入口：用户原始六问提示词（逐字保留）、章节 0–7 对照表、Preview 硬约束、落盘位置、工作流 |
+| `briefing-outline.md` | 六问逐条展开，规定每节必须写全的子项 |
+| `math-and-mermaid.md` | 公式只用 `$` / `$$`，Mermaid 节点不放公式，保证 Cursor Preview 能渲染 |
+| `examples.md` | 公式与方法图的正误样例 |
+| `scripts/check_briefing_md.py` | 格式检查脚本，写完必须跑通 |
+
+配套规则 [`.cursor/rules/paper-briefing-preview.mdc`](../../.cursor/rules/paper-briefing-preview.mdc)：编辑 `docs/**/*.md` 时自动提示遵循该 skill。
+
+用法：在 Cursor 里对 agent 说“讲解 / 精读 / 组会汇报 `docs/xxx.pdf`”，会自动触发该 skill。写完后在仓库根检查：
+
+```text
+python3 .cursor/skills/paper-group-briefing/scripts/check_briefing_md.py docs/paper_assist/<slug>/BRIEFING.md
+```
+
+注意：`.gitignore` 忽略了 `.cursor`，新增 skill / rule 文件要用 `git add -f` 才能入库。
+
+## 对照总稿
 
 - [`组会汇报_三篇OPD变体_TGOPD_GCOPD_RLCSD对照精读.md`](../组会汇报_三篇OPD变体_TGOPD_GCOPD_RLCSD对照精读.md)
 
@@ -13,3 +35,4 @@
 | RLCSD | [`rlcsd/BRIEFING.md`](rlcsd/BRIEFING.md) |
 | FlowBalance | [`flowbalance/BRIEFING.md`](flowbalance/BRIEFING.md) |
 | SPOT | [`spot/BRIEFING.md`](spot/BRIEFING.md) |
+| SAGE-OPD | [`sage-opd/BRIEFING.md`](sage-opd/BRIEFING.md) |

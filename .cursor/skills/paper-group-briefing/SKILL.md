@@ -41,8 +41,17 @@ description: >-
 1. 组会交付物是 **Markdown**。公式写在 `.md` 里，用 `$...$` / `$$...$$`，让 Cursor Preview / KaTeX 渲染。禁止用 `\begin{equation}`、`\[...\]`、未包美元的 `\frac` 充当正文公式。
 2. 方法必须有至少一张 **Mermaid**（`flowchart` 模块关系；推荐再加 `sequenceDiagram` 训练/推理一步）。图要在 Preview 里出图，不要 PlantUML，不要把 `$` 公式塞进节点。
 3. 不要把「公式清晰」推给 `BRIEFING.tex` 而在 `.md` 里留源码。用户要看的是 Preview 后的 md。除非用户点名要 TeX PDF，否则不强制 `.tex`。
-4. 落盘：用户指定目录优先；否则 `paper_assist/<slug>/BRIEFING.md`。对照多篇可另写 `docs/组会汇报_*.md`。
-5. 写完对每个新 md 跑：`python3 ~/.cursor/skills/paper-group-briefing/scripts/check_briefing_md.py <file.md>`，不过就改到过。
+4. 落盘：用户指定目录优先；否则 `docs/paper_assist/<slug>/BRIEFING.md`（不要写到仓库根 `paper_assist/`），并在 `docs/paper_assist/README.md` 的索引表加一行。论文 PDF 放 `docs/`，md 开头用相对链接 `../../<文件名>.pdf` 指向它。对照多篇可另写 `docs/组会汇报_*.md`。
+5. 写完对每个新 md 在仓库根跑：`python3 .cursor/skills/paper-group-briefing/scripts/check_briefing_md.py <file.md>`，不过就改到过。
+6. 表格里的数字写完后回原文逐表核对；成功率类指标可以反推 episode / 题数，除不尽的标 `[推断]` 并写进第 7 节。
+
+## 读 PDF
+
+部分 arXiv PDF 用 `pdftotext` 会报加密错误，改用 PyMuPDF：
+
+```text
+python3 -c "import fitz,sys; d=fitz.open(sys.argv[1]); print('\n'.join(f'===== PAGE {i+1} =====\n'+p.get_text() for i,p in enumerate(d)))" paper.pdf > /tmp/paper.txt
+```
 
 ## 工作流
 
@@ -52,11 +61,13 @@ Task Progress:
 - [ ] 按 briefing-outline.md 写 0–7 节
 - [ ] 第 2 节：ASCII 树 + Mermaid（节点用纯文本，公式写在图外 $$ 块）
 - [ ] 第 3 节：关键式用 $$；手算小例子
-- [ ] python scripts/check_briefing_md.py
+- [ ] 回原文核对表格数字
+- [ ] python3 .cursor/skills/paper-group-briefing/scripts/check_briefing_md.py <file.md>
+- [ ] 更新 docs/paper_assist/README.md 索引
 - [ ] 对话里先给一句话贡献和文件路径，细节指向 md
 ```
 
-## 和 paper-read-reproduce 的分工
+## 范围
 
-- 本 skill：组会讲解、Preview 公式与图。
-- `paper-read-reproduce`：要跑通推理/训练、`conda_env_setup`、`CODE_PAPER_MAP` 时再用。两者可叠，但组会 md 仍遵守本 skill 的 Preview 规则。
+- 本 skill 只管组会讲解 md：六问结构、Preview 公式与 Mermaid 图。
+- 要跑通推理/训练时，同目录可再放 `QUICK_START.md`、`CODE_PAPER_MAP.md`、`MODEL_SPECS.md`、`conda_env_setup.sh`（参考 `docs/paper_assist/tgopd/`）。这些文件也遵守本 skill 的 Preview 规则。
