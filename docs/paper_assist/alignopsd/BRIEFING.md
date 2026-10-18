@@ -3,7 +3,7 @@
 论文：Mingju Chen, Can Lv, Jinrong Liu, Huan Zhang, Heng Chang, Shiji Zhou. *Beyond Timestamps: Decision-Aligned On-Policy Distillation for Long-Horizon Agents*. arXiv:2609.33391v1, 2026-09-27.
 单位：北京航空航天大学（未来区块链与隐私计算高精尖中心、人工智能学院）、清华大学
 PDF：仓库副本 [`docs/ALIGNOPSD.pdf`](../../ALIGNOPSD.pdf)（25 页，含附录 A–F 与 Algorithm 1）
-代码：[github.com/mingju-c/Align-OPSD](https://github.com/mingju-c/Align-OPSD)（基于 verl / verl-agent，代码内部名 `BeyondTimestamps`）。本稿核对的是 2026-10-18 浅克隆的 `main@6654edc`。
+代码：本地 submodule [`algorithm/Align-OPSD/`](../../../algorithm/Align-OPSD/)（[github.com/mingju-c/Align-OPSD](https://github.com/mingju-c/Align-OPSD)，内部名 `BeyondTimestamps`，`main@6654edc`）。对照表：[`CODE_PAPER_MAP.md`](CODE_PAPER_MAP.md)；启动：[`QUICK_START.md`](QUICK_START.md)。
 证据口径：论文正文 + 附录 > 官方启动脚本与 `CONFIGS.md`。**[推断]** 是我根据数字或代码做的判断；**【注解】** 是组会追问的展开。
 
 和组里已读材料的位置：SAGE-OPD 是“外部大教师 + 按轮加权的 OPD loss”；ALIGNOPSD 是 **自教师（同一个模型加特权技能）+ 不加蒸馏 loss，只用教师证据重新分配 GRPO 的轨迹优势**。它更接近 RLSD 的思路（方向由环境奖励定，幅度由教师调），但加了两层新东西：**跨 rollout 找“功能上对应的决策”再打分**，以及 **可变长度的决策段（span）分层分配 credit**。
@@ -526,11 +526,15 @@ $D$ 的具体定义论文只写了“raw turn density”，我按 $D_{i,k}=B_{i,
 
 ## 6.4 代码
 
+本地已作为 submodule 放在 `algorithm/Align-OPSD/`。换电脑后在仓库根执行 `./gitsubmodules.sh algorithm/Align-OPSD`。
+
 ```text
-git clone https://github.com/mingju-c/Align-OPSD.git
+cd algorithm/Align-OPSD
 python scripts/check_training.py --task search --model-size 3b --config-only
 bash examples/beyond_timestamps_trainer/run_search_3b.sh
 ```
+
+对照与启动说明：[`CODE_PAPER_MAP.md`](CODE_PAPER_MAP.md)、[`QUICK_START.md`](QUICK_START.md)。
 
 关键实现文件：
 

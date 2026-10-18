@@ -36,5 +36,5 @@ python3 .cursor/skills/paper-group-briefing/scripts/check_briefing_md.py docs/pa
 | FlowBalance | [`flowbalance/BRIEFING.md`](flowbalance/BRIEFING.md) |
 | SPOT | [`spot/BRIEFING.md`](spot/BRIEFING.md) |
 | SAGE-OPD | [`sage-opd/BRIEFING.md`](sage-opd/BRIEFING.md) |
-| ALIGNOPSD | [`alignopsd/BRIEFING.md`](alignopsd/BRIEFING.md) |
-| RetireOPD | [`retireopd/BRIEFING.md`](retireopd/BRIEFING.md) |
+| ALIGNOPSD | [`alignopsd/BRIEFING.md`](alignopsd/BRIEFING.md) · [`CODE_PAPER_MAP.md`](alignopsd/CODE_PAPER_MAP.md) · 代码 `algorithm/Align-OPSD/` |
+| RetireOPD | [`retireopd/BRIEFING.md`](retireopd/BRIEFING.md) · [`CODE_PAPER_MAP.md`](retireopd/CODE_PAPER_MAP.md) · 代码 `algorithm/SDAR/` |

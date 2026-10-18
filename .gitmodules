@@ -62,3 +62,9 @@
 [submodule "algorithm/beta-opsd"]
 	path = algorithm/beta-opsd
 	url = https://github.com/lying2020/beta-opsd.git
+[submodule "algorithm/Align-OPSD"]
+	path = algorithm/Align-OPSD
+	url = https://github.com/mingju-c/Align-OPSD.git
+[submodule "algorithm/SDAR"]
+	path = algorithm/SDAR
+	url = https://github.com/ZJU-REAL/SDAR.git

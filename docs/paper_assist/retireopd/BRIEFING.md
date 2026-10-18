@@ -3,7 +3,7 @@
 论文：Yan Yu, Zhengxi Lu, Yizhou Liu, Yichen Pan, Aozhe Wang, Qipeng Chen, Hua Yang, Wenqi Zhang, Qianglong Chen, Yongliang Shen. *RetireOPD: Self-Retiring On-Policy Distillation for Agentic Reinforcement Learning*. arXiv:2609.20784v2, 2026-09-27.
 单位：浙江大学、阿里巴巴（SDAR 同组）
 PDF：仓库副本 [`docs/RetireOPD.pdf`](../../RetireOPD.pdf)（23 页，含附录 A.1–A.9 与 Algorithm 1）
-代码：放在 SDAR 仓库里 [github.com/ZJU-REAL/SDAR](https://github.com/ZJU-REAL/SDAR)，没有单独的 RetireOPD 仓库。本稿核对的是 2026-10-18 浅克隆的 `main@29dcb12`，核心文件为：
+代码：没有独立仓库，在 SDAR 里。本地 submodule [`algorithm/SDAR/`](../../../algorithm/SDAR/)（[github.com/ZJU-REAL/SDAR](https://github.com/ZJU-REAL/SDAR)，`master@29dcb12`）。对照表：[`CODE_PAPER_MAP.md`](CODE_PAPER_MAP.md)；启动：[`QUICK_START.md`](QUICK_START.md)。核心文件：
 
 - `verl/trainer/ppo/retire_opd.py`：退休状态机
 - `verl/trainer/ppo/retire_opd_trainer.py`：训练器
@@ -406,7 +406,7 @@ WebShop Score：RetireOPD 为 86.6 / 85.8 / 91.7；GRPO+OPD 为 82.5 / 84.5 / 90
 
 - **ALFWorld**：`alfworld` 数据（`json_2.1.1`，脚本会在 `~/.cache/alfworld` 或 `~/data/alfworld` 下找），用 `examples/data_preprocess/prepare --mode text --train_data_size 16 --val_data_size 128` 生成 parquet。
 - **WebShop**：商品库与搜索服务（verl-agent 的标准 WebShop 环境）。
-- **技能**：关键词匹配检索。SDAR 仓库目前只带了 `skills/alfworld`；`run_webshop_3b.sh` 引用的 `skills/webshop` **不在仓库里**，需要自己从 SkillRL 的 SkillBank 补齐（Align-OPSD 仓库里有 `skills/webshop`，可以参考）。
+- **技能**：关键词匹配检索。完整 submodule 里有 `skills/alfworld/`、`skills/webshop/`、`skills/search/`。WebShop 脚本用 `skills/webshop`。
 - **评测划分**：建议另外留出一份不参与退休判据和 checkpoint 选择的测试集。
 
 ## 6.2 模型
@@ -420,11 +420,16 @@ WebShop Score：RetireOPD 为 86.6 / 85.8 / 91.7；GRPO+OPD 为 82.5 / 84.5 / 90
 
 ## 6.4 代码
 
+本地已作为 submodule 放在 `algorithm/SDAR/`。换电脑后在仓库根执行 `./gitsubmodules.sh algorithm/SDAR`。
+
 ```text
-git clone https://github.com/ZJU-REAL/SDAR.git
+cd algorithm/SDAR
 bash examples/skill_grpo_trainer/run_alfworld_3b.sh
-TEACHER_MODEL_PATH=/path/to/teacher_hf TEACHER_PERFORMANCE=0.797 bash examples/retireopd_trainer/run_alfworld_3b.sh
+TEACHER_MODEL_PATH=/path/to/teacher_hf TEACHER_PERFORMANCE=0.797 \
+  bash examples/retireopd_trainer/run_alfworld_3b.sh
 ```
+
+对照与启动说明：[`CODE_PAPER_MAP.md`](CODE_PAPER_MAP.md)、[`QUICK_START.md`](QUICK_START.md)。
 
 第一条命令训练阶段 1 的教师，第二条训练阶段 2 + 3 的学生。`TEACHER_PERFORMANCE` 填教师在同一验证指标（默认 `val/success_rate`）上的值；README 的例子写的是 0.50，需要换成自己教师的实测值。
 
