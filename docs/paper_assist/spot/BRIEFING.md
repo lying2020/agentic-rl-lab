@@ -1,7 +1,8 @@
 # 组会汇报：SPOT（Sparse Probing and Outcome-Calibrated OPD）
 
 论文：Qu et al. *SPOT: Sparse Probing and Outcome Calibration for On-Policy Distillation*. arXiv:2608.04419v1, 2026-08-05.  
-PDF：`/home/liying/Downloads/9.8 SPOT.pdf`（仓库副本 [`docs/9.8_SPOT.pdf`](../../9.8_SPOT.pdf)）。  
+PDF：仓库 `docs/9.8_SPOT.pdf`。  
+
 代码：本地 `algorithm/SPOT/`（[github.com/QuZikun/SPOT](https://github.com/QuZikun/SPOT)，verl fork）。框架：verl + SGLang 异步 rollout + FSDP2。  
 证据口径：arXiv HTML + 附录 B–C。不确定处标 `[估计]`。
 

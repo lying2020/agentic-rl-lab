@@ -1,7 +1,8 @@
 # 组会汇报：FlowBalance（Verifier-Grounded Self-Improvement）
 
 论文：Huang, Panaganti, Mi, Liang. *FlowBalance: Verifier-Grounded Self-Improvement from On-Policy Reasoning Experience*. arXiv:2609.03241v1, 2026-09-03.  
-PDF：`/home/liying/Downloads/9.5 FlowBalance.pdf`（仓库副本 [`docs/9.5_FlowBalance.pdf`](../../9.5_FlowBalance.pdf)）。  
+PDF：仓库 `docs/9.5_FlowBalance.pdf`。  
+
 代码：本地 `algorithm/FlowBalance/`（[github.com/alexhuang13/FlowBalance](https://github.com/alexhuang13/FlowBalance)；历史路径叫 `FlowSD` / `recipe/flowsd/`）。框架：vendored `verl` + Ray + FSDP + vLLM。  
 证据口径：arXiv HTML + GitHub README + 附录 D。不确定处标 `[估计]` / `[推断]`。
 
