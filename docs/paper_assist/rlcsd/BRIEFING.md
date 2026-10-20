@@ -4,7 +4,7 @@
 
 论文：Pan*, Tao, Zhai et al. *RLCSD: Reinforcement Learning with Contrastive On-Policy Self-Distillation*. arXiv:2606.11709v1, 2026-06-10.  
 单位：清华大学 / 通义实验室 / 北京大学  
-PDF：`docs/9.4_RLCSD.pdf`  
+PDF：`docs/3.3_RLCSD.pdf`  
 代码：https://github.com/THU-BPM/RLCSD（vendored verl）  
 数据：https://huggingface.co/datasets/Leyiii/RLCSD  
 和组里已读材料的位置：这是 **特权上下文自蒸馏（OPSD）**，与 $\beta$-OPSD / AntiSD 同族，**不是** 外部大教师 OPD。它承认 vanilla OPSD 的 token 信号被文风带跑，解法是 **正确 hint 对错误 hint 做对比消去**，再作为 GRPO 优势的调制而不是替代。
@@ -73,29 +73,97 @@ $$
 
 ## 2. 方法论树状拆解
 
-**创新落点**：一级是 *对称正负特权对比*；二级是 $K$ 条负 hint 概率均值（先平均再 log）；三级是 verifier-anchored clamp + two-path 归一。
+**为什么是这些工具**：文风漂移来自“看过一份参考解答”这个模板本身，单侧正 hint 消不掉，所以用**同一模板**下的正确 hint 对错误 hint 做差。负支要覆盖多种错法，所以对 $K$ 条错误 hint 的**概率**先平均再取 log，得到 mixture，而不是对 logprob 平均。对比信号仍可能反号，所以只允许它调制 $A_{\mathrm{ORM}}$ 的幅度，并用同号 clamp 锁住验证器方向。被选中的 token 只占 20–30%，若和未选中 token 放进同一个平均，梯度会被稀释成 GRPO，所以 two-path 分开归一。PPO-clip 与 GRPO 组相对优势是共享栈，**不是本文创新**。
+
+创新落在一级：**对称正负特权对比**。二级是 $K$ 条负 hint 的概率均值。三级是 verifier-anchored clamp 与 two-path。
 
 ```text
 RLCSD
-├─ Stage 1：采样与划分
-│   ├─ G=8 条学生 rollout，规则验证器 0/1
-│   ├─ G⁺ / G⁻；任一侧为空则丢弃（与 GRPO 零优势组一致）
-│   └─ 组相对 A_ORM（有 std 归一）
-│
-├─ Stage 2：对比 token 信号
-│   ├─ 正 hint：主实验用数据集 GT CoT+答案；消融可用组内正确 sibling
-│   ├─ 负 hint：K=4 条错误 sibling，排除当前 y
-│   ├─ 模板字节级相同（都叫 “Correct final answer”）→ style 更共享
-│   └─ ectr = log πT(·|yc*) − log( (1/K) Σ πT(·|yw,k*) )
-│
-└─ Stage 3：调制与 two-path 损失
-    ├─ rt = λ tanh(ectr/τ) ∈ (−λ,λ)
-    ├─ mt = 1[|rt|>δ]  （约 20–30% token）
-    ├─ Ã = same_sign_clamp(A_ORM + rt)  禁止反转验证器方向
-    └─ 在 U={mt=0} 与 M={mt=1} 上分别平均 PPO-clip，η 加权 M
+|-- Stage 1  采样与划分
+|   |-- G=8 条学生 rollout，规则验证器 0/1
+|   |-- G+ / G-；任一侧为空则丢弃
+|   `-- 组相对 A_ORM（有 std 归一）
+|-- Stage 2  对比 token 信号
+|   |-- 正 hint：主实验用数据集 GT CoT 加答案
+|   |-- 负 hint：K=4 条错误 sibling，排除当前 y
+|   |-- 模板字节级相同，style 更共享
+|   `-- e_ctr = log piT(yc*) - log(mean_k piT(yw,k*))
+`-- Stage 3  调制与 two-path 损失
+    |-- rt = lambda * tanh(e_ctr / tau)，落在 (-lambda, lambda)
+    |-- mt = 1 when abs(rt) > delta（约 20% 到 30% token）
+    |-- Atilde = same-sign clamp of A_ORM + rt
+    `-- U 与 M 分别平均 PPO-clip，eta 加权 M
 ```
 
-交互：Stage 1 的验证器既划分 hint 池，又给出 $A_{\mathrm{ORM}}$ 方向；Stage 2 不替代该方向；Stage 3 保证稀疏 token 信号不被全局平均稀释。
+交互：Stage 1 的验证器既划分 hint 池，又给出 $A_{\mathrm{ORM}}$ 的符号；Stage 2 只产出 token 级幅度；Stage 3 禁止反号，并防止稀疏 token 被全局平均稀释。
+
+顶层数据流：
+
+```mermaid
+flowchart TD
+  X[Prompt x] --> Roll[Student rollouts G equals 8]
+  Roll --> Ver[Verifier split correct and wrong]
+  Ver --> Aorm[Group relative A_ORM]
+  Ver --> Hints[Correct hint and K wrong hints]
+  Hints --> Ectr[Contrast signal e_ctr]
+  Ectr --> Mod[Tanh squash and mask]
+  Aorm --> Clamp[Same-sign clamp]
+  Mod --> Clamp
+  Clamp --> Two[Two-path PPO]
+```
+
+图中 Clamp 对应：当 $A_{\mathrm{ORM}}\ge 0$ 时 $\tilde A_t=\max(0,A_{\mathrm{ORM}}+r_t)$，否则 $\tilde A_t=\min(0,A_{\mathrm{ORM}}+r_t)$。
+
+模块内部展开：
+
+```mermaid
+flowchart TD
+  subgraph st1 [Stage1_Sample]
+    S1[Sample G rollouts]
+    S2{both correct and wrong exist}
+    S3[Drop group]
+    S4[Compute A_ORM]
+    S1 --> S2
+    S2 -->|no| S3
+    S2 -->|yes| S4
+  end
+  subgraph st2 [Stage2_Contrast]
+    H1[Positive hint from GT or sibling]
+    H2[K wrong hints exclude current y]
+    H3[Mean probabilities then log]
+    H1 --> H3
+    H2 --> H3
+  end
+  subgraph st3 [Stage3_Modulate]
+    M1[Squash e_ctr with tanh]
+    M2{abs rt above delta}
+    M3[Unmodulated path U]
+    M4[Modulated path M with sign clamp]
+    M1 --> M2
+    M2 -->|no| M3
+    M2 -->|yes| M4
+  end
+  S4 --> H1
+  S4 --> M4
+  H3 --> M1
+```
+
+一个训练 step 的时序（教师是带 hint 的自身 snapshot，不是外部大模型）：
+
+```mermaid
+sequenceDiagram
+  participant S as Student
+  participant V as Verifier
+  participant T as PrivilegedSnapshot
+  participant L as Loss
+  S->>S: sample G rollouts
+  S->>V: score each rollout
+  V-->>L: split correct and wrong
+  L->>T: one correct hint and K wrong hints
+  T-->>L: contrast e_ctr on student tokens
+  L->>L: tanh mask and same-sign clamp
+  L->>L: two-path PPO update
+```
 
 ---
 

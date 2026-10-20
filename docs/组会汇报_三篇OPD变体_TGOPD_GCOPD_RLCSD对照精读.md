@@ -6,13 +6,13 @@
 2. **GC-OPD** — *Beyond Teacher Likelihood: Group-Calibrated On-Policy Distillation for Long-Context Reasoning*（Zhang & Wang et al., arXiv:2608.19181）
 3. **RLCSD** — *Reinforcement Learning with Contrastive On-Policy Self-Distillation*（Pan et al., arXiv:2606.11709）
 
-**单篇精读**（六问完整版 + 可编译 LaTeX）：
+**单篇精读**（六问完整版，Preview 里看公式和 Mermaid）：
 
-- [`paper_assist/tgopd/BRIEFING.md`](../paper_assist/tgopd/BRIEFING.md)
-- [`paper_assist/gc-opd/BRIEFING.md`](../paper_assist/gc-opd/BRIEFING.md)
-- [`paper_assist/rlcsd/BRIEFING.md`](../paper_assist/rlcsd/BRIEFING.md)
+- [`paper_assist/tgopd/BRIEFING.md`](paper_assist/tgopd/BRIEFING.md)
+- [`paper_assist/gc-opd/BRIEFING.md`](paper_assist/gc-opd/BRIEFING.md)
+- [`paper_assist/rlcsd/BRIEFING.md`](paper_assist/rlcsd/BRIEFING.md)
 
-**核验方式**：以本地 PDF（`docs/7_TGOPD.pdf`、`docs/3_GC-OPD.pdf`、`docs/9.4_RLCSD.pdf`）正文与附录为准。TGOPD 无公开代码；GC-OPD / RLCSD 对照了 GitHub README。文中“源码核验”表示可在 PDF 或仓库定位；“分析判断”是研究评价，不要与作者主张混淆。
+**核验方式**：以本地 PDF（`docs/3.2_TGOPD.pdf`、`docs/3.1_GC-OPD.pdf`、`docs/3.3_RLCSD.pdf`）正文与附录为准。这三份与 Downloads 里的 `7 TGOPD.pdf`、`3 GC-OPD(和rl结合).pdf`、`9.4 RLCSD（对比RLSD看）.pdf` 字节大小一致。TGOPD 无公开代码；GC-OPD / RLCSD 对照了 GitHub README。文中“源码核验”表示可在 PDF 或仓库定位；“分析判断”是研究评价，不要与作者主张混淆。
 
 和上一份 Trust-Region 三篇精读的关系：TRB / TrOPD / TOP-D 管的是 **行为分布、token 分区、奖励有界**。这三篇管的是 **教师值不值得信、教师与验证器是否同序、特权自蒸馏的文风漂移**。不要把表中分数横向排名。
 
@@ -32,14 +32,35 @@
 
 ```text
 教师监督从哪来？
-├─ 外部更强冻结教师
-│   ├─ 不检查对错、每题都蒸 → Vanilla OPD
-│   ├─ 先验证再决定蒸不蒸 → TGOPD（整题路由）
-│   └─ 一直蒸，但用验证器纠正组内排序 → GC-OPD（残差校准）
-└─ 自身 + 特权上下文（OPSD）
-    ├─ 只看正确解答 → 文风漂移、长度崩/炸
-    └─ 正确 vs 错误对称对比，再调制 GRPO → RLCSD
+|-- 外部更强冻结教师
+|   |-- 不检查对错、每题都蒸 → Vanilla OPD
+|   |-- 先验证再决定蒸不蒸 → TGOPD（整题路由）
+|   `-- 一直蒸，但用验证器纠正组内排序 → GC-OPD（残差校准）
+`-- 自身 + 特权上下文（OPSD）
+    |-- 只看正确解答 → 文风漂移、长度崩/炸
+    `-- 正确 vs 错误对称对比，再调制 GRPO → RLCSD
 ```
+
+三条干预落在不同层，不能当成同一个“加验证器”开关：
+
+```mermaid
+flowchart TD
+  subgraph tg [TGOPD_admit]
+    P[Teacher probes] --> G{qT at least tau}
+    G -->|admit| A1[Dense OPD]
+    G -->|reject| A2[GRPO only]
+  end
+  subgraph gc [GCOPD_calibrate]
+    B1[Token OPD advantage] --> B2[Residual vs verifier]
+    B2 --> B3[RACA add-back]
+  end
+  subgraph rl [RLCSD_cancel]
+    C1[Correct hint vs K wrong hints] --> C2[Style-cancelled e_ctr]
+    C2 --> C3[Modulate A_ORM keep sign]
+  end
+```
+
+TGOPD 的门是互斥路由；GC-OPD 的残差加在始终存在的 $A_t$ 上；RLCSD 的 $e_{\mathrm{ctr}}$ 只改 $A_{\mathrm{ORM}}$ 的幅度。
 
 ## 1.3 不应直接横向比分数
 
@@ -178,9 +199,9 @@ Sanity 对照：
 
 # Sources
 
-- `/home/liying/Desktop/agentic-rl-lab/docs/7_TGOPD.pdf`（arXiv:2609.02998）
-- `/home/liying/Desktop/agentic-rl-lab/docs/3_GC-OPD.pdf`（arXiv:2608.19181）
-- `/home/liying/Desktop/agentic-rl-lab/docs/9.4_RLCSD.pdf`（arXiv:2606.11709）
+- `/home/liying/Desktop/agentic-rl-lab/docs/3.2_TGOPD.pdf`（arXiv:2609.02998）
+- `/home/liying/Desktop/agentic-rl-lab/docs/3.1_GC-OPD.pdf`（arXiv:2608.19181）
+- `/home/liying/Desktop/agentic-rl-lab/docs/3.3_RLCSD.pdf`（arXiv:2606.11709）
 - https://github.com/SolereZhang/GC-OPD
 - https://github.com/THU-BPM/RLCSD
 - TGOPD 无公开实现；框架声明为 https://github.com/THUDM/slime

@@ -5,7 +5,7 @@
 论文：AllSpark Team. *Verify Before You Distill: Prompt-Level Teacher Gating for On-Policy Distillation*. arXiv:2609.02998v1, 2026-09-02.  
 状态：Public Technical Report（2026-08-28）  
 贡献者：Zhiwei Zhang, Zechen Sun, Fei Zhao, Kang Peng, Bin Liang, Huayu Deng, Yao Hu, Kam-Fai Wong, Mu Chuan  
-PDF：`docs/7_TGOPD.pdf`  
+PDF：`docs/3.2_TGOPD.pdf`  
 框架：`slime` 异步 rollout–update（THUDM/slime）  
 代码：截至组会整理时 **未见官方开源仓**；实现细节以 PDF 附录 B–D 为准。  
 和组里已读材料的位置：这是 **外部冻结教师 OPD** 的 *prompt 级准入门*，不是 TrOPD 那种 token 级信任区，也不是 TOP-D 那种奖励有界化。它直接引用了 TrOPD、RG-OPD、RLSD、EOPD、REOPOLD。

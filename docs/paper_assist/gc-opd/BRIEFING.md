@@ -4,7 +4,7 @@
 
 论文：Zhang*, Wang* et al. *Beyond Teacher Likelihood: Group-Calibrated On-Policy Distillation for Long-Context Reasoning*. arXiv:2608.19181v1, 2026-08-19.  
 单位：清华大学 / 北京邮电大学 / OpenBMB  
-PDF：`docs/3_GC-OPD.pdf`  
+PDF：`docs/3.1_GC-OPD.pdf`  
 代码：https://github.com/SolereZhang/GC-OPD（verl；OPD 入口即 `beta=0`）  
 数据：GoLongRL 32K 过滤子集（9527 train / 231 val）  
 和组里已读材料的位置：这是 **长上下文外部教师 OPD**，用验证器做 *组内相对残差校准*，不是 TGOPD 那种“整题撤教师”，也不是 RLCSD 那种特权自蒸馏。Related work 点名 Uni-OPD、FiRe-OPD、PowerOPD、ExOPD、SG-OPD、SCOPE、MOPD。
@@ -79,29 +79,100 @@ Vanilla OPD 会推 A。残差给 A 负校正、B 正校正。RACA 再把 $|\rho|
 
 ## 2. 方法论树状拆解
 
-**创新落点**：一级是 *组内双信号残差*；二级是 RACA 的有界正信用；教师前向零新增。
+**为什么是这些工具**：教师与验证器的冲突是**组内排序**冲突，不是单条轨迹的绝对分，所以两边都做 z-score，再相减得到残差 $\rho$。残差是轨迹级标量，要回到 token 梯度，但不能让信用权重变负（否则会把 $\rho$ 的符号反转），所以用恒正的 $\tanh$ 信用 RACA，只调制幅度。原始 $A_t$ 保留，是因为消融里“再加一份 OPD”几乎无效，校正必须叠在原稠密优势上，而不是替换它。PPO-clip 是共享训练栈，**不是本文创新**。
+
+创新落在一级：**组内双信号残差**。二级是 RACA 的有界正信用。三级是 $\sigma$ 过小时退回 vanilla。教师前向零新增。
 
 ```text
 GC-OPD
-├─ 模块 1：组内相对评估（不改教师 pass）
-│   ├─ token OPD 优势 At（与 vanilla 相同，detach）
-│   ├─ 轨迹分 s = mean_t At（长度归一，避免长答放大）
-│   ├─ 验证器 R（二值或 graded）
-│   └─ 分别 z-score → R̃, s̃；σ 过小则整组 ρ=0，退回 vanilla
-│
-├─ 模块 2：有符号分歧残差
-│   ├─ ρ = R̃ − s̃
-│   ├─ 不为“再加一份验证器”，而是减去 OPD 已表达的相对偏好
-│   └─ 若验证器偏好 i 而 OPD 偏好 j，则 ρi−ρj>0（Eq.8）
-│
-└─ 模块 3：RACA 信用分配 + 原 OPD 保留
-    ├─ ut = (At − s) / σ_A   （组内相对，不是 token 正确性）
-    ├─ ct = 1 + tanh(ut/2) ∈ (0,2)  恒正，不反转 ρ 符号
-    ├─ A' = At + β ct ρ，β=0.10
-    └─ clip 到 [−10,10] 后进原 PPO-clip
+|-- Module 1  组内相对评估（不改教师前向）
+|   |-- token OPD 优势 At（与 vanilla 相同，detach）
+|   |-- 轨迹分 s = mean_t At（长度归一，避免长答放大）
+|   |-- 验证器 R（二值或 graded）
+|   `-- 分别 z-score 得到 Rtilde 与 stilde；sigma 过小则整组 rho=0
+|-- Module 2  有符号分歧残差
+|   |-- rho = Rtilde - stilde
+|   |-- 减去 OPD 已经表达的相对偏好，不是再加一份验证器
+|   `-- 验证器偏好 i 而 OPD 偏好 j 时，rho_i - rho_j > 0
+`-- Module 3  RACA 信用分配 + 原 OPD 保留
+    |-- ut = (At - s) / sigma_A（组内相对，不是 token 正确性）
+    |-- ct = 1 + tanh(ut/2)，落在 (0, 2)，恒正
+    |-- A' = At + beta * ct * rho，beta=0.10
+    `-- clip 到 [-10, 10] 后进原 PPO-clip
 ```
 
-数据流：学生 rollout → 教师 logprob 与验证器并行 → 组统计 → token 校正 → 同一 actor surrogate。$\beta=0$ 精确等于 vanilla OPD（仓库入口如此实现）。
+模块交互：Module 1 的 $A_t$ 同时喂给轨迹分 $s$ 和 RACA；Module 2 只产出每条回答一个标量 $\rho$；Module 3 用 $c_t$ **乘** $\rho$ 再加回 $A_t$，从不替换教师 log-ratio。$\beta=0$ 精确等于 vanilla OPD。
+
+顶层数据流：
+
+```mermaid
+flowchart TD
+  X[Prompt x] --> S[StudentRollout G equals 8]
+  S --> T[Teacher logprob on student tokens]
+  S --> V[Verifier reward R]
+  T --> At[Token advantage At]
+  At --> Score[Trajectory score s]
+  V --> Zr[Group z-score of R]
+  Score --> Zs[Group z-score of s]
+  Zr --> Rho[Residual rho]
+  Zs --> Rho
+  At --> Cred[RACA credit ct]
+  Rho --> Mix[Calibrated advantage]
+  Cred --> Mix
+  Mix --> PPO[PPO clip]
+```
+
+图中 Mix 对应
+
+$$
+A_t^{\prime(i)}=A_t^{(i)}+\beta\,c_t^{(i)}\,\rho^{(i)}.
+$$
+
+模块内部展开：
+
+```mermaid
+flowchart TD
+  subgraph mod1 [Module1_GroupScores]
+    M1[Detach token log-ratio At]
+    M2[s equals mean of At]
+    M3[Z-score R and s]
+    M1 --> M2 --> M3
+  end
+  subgraph mod2 [Module2_Residual]
+    R1{sigma too small}
+    R2[rho equals 0]
+    R3[rho equals Rtilde minus stilde]
+    R1 -->|yes| R2
+    R1 -->|no| R3
+  end
+  subgraph mod3 [Module3_RACA]
+    C1[Relative ut inside one answer]
+    C2[Positive credit ct]
+    C3[Add beta ct rho back to At]
+    C1 --> C2 --> C3
+  end
+  M3 --> R1
+  R2 --> C3
+  R3 --> C3
+```
+
+一个训练 step 的时序（教师只打分，不另生成）：
+
+```mermaid
+sequenceDiagram
+  participant S as Student
+  participant T as FrozenTeacher
+  participant V as Verifier
+  participant L as Loss
+  S->>S: sample G responses
+  S->>T: already sampled tokens
+  T-->>L: token log ratio At
+  S->>V: same responses
+  V-->>L: reward R
+  L->>L: z-score then residual rho
+  L->>L: RACA credit and add back to At
+  L->>L: PPO clip update
+```
 
 ---
 
