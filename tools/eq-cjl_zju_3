@@ -1,0 +1,278 @@
+#!/bin/bash
+#
+# eq-cjl_zju_3: 直连远程主机，支持登录 / 上传 / 下载
+#   本地 -> cjl@10.130.129.35:1049
+#
+
+# 被 source 安装时不能 set -e，否则失败会直接干掉当前终端
+if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
+    set -euo pipefail
+else
+    set -uo pipefail
+fi
+
+zju3_is_sourced() {
+    [[ "${BASH_SOURCE[0]}" != "$0" ]]
+}
+
+# ---------- 远程主机 ----------
+CMD_NAME="eq-cjl_zju_3"
+REMOTE_USER="cjl"
+REMOTE_HOST="10.130.129.35"
+REMOTE_PASS="cjldcd"
+REMOTE_PORT="1049"
+REMOTE_UPLOAD_DIR="~/"
+
+# ---------- 安装 ----------
+INSTALL_BIN_DIR="/usr/local/bin"
+INSTALL_BASHRC_PREFERRED="/home/root/.bashrc"
+
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m'
+
+die() {
+    echo -e "${RED}错误: $*${NC}" >&2
+    exit 1
+}
+
+info() {
+    echo -e "${BLUE}$*${NC}"
+}
+
+ok() {
+    echo -e "${GREEN}✓ $*${NC}"
+}
+
+check_sshpass() {
+    if ! command -v sshpass &>/dev/null; then
+        die "未安装 sshpass
+请先安装:
+  Ubuntu/Debian: sudo apt-get install sshpass
+  CentOS/RHEL: sudo yum install sshpass
+  macOS: brew install sshpass"
+    fi
+}
+
+SSH_OPTS=(-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null)
+
+remote_scp() {
+    sshpass -p "$REMOTE_PASS" scp -r "${SSH_OPTS[@]}" -P "$REMOTE_PORT" "$@"
+}
+
+print_step() {
+    local description="$1"
+    shift
+    echo -e "${GREEN}执行:${NC} $*"
+    echo -e "${BLUE}描述:${NC} $description"
+    echo "----------------------------------------"
+}
+
+resolve_bashrc() {
+    local preferred_dir
+    preferred_dir="$(dirname "$INSTALL_BASHRC_PREFERRED")"
+
+    if mkdir -p "$preferred_dir" 2>/dev/null && touch "$INSTALL_BASHRC_PREFERRED" 2>/dev/null; then
+        echo "$INSTALL_BASHRC_PREFERRED"
+        return
+    fi
+    if sudo mkdir -p "$preferred_dir" 2>/dev/null && sudo touch "$INSTALL_BASHRC_PREFERRED" 2>/dev/null; then
+        echo "$INSTALL_BASHRC_PREFERRED"
+        return
+    fi
+    echo "${HOME}/.bashrc"
+}
+
+ensure_path_in_bashrc() {
+    local bashrc="$1"
+    local bin_dir="$2"
+    local marker="# ${CMD_NAME} PATH"
+
+    if [ ! -f "$bashrc" ]; then
+        touch "$bashrc" 2>/dev/null || sudo touch "$bashrc"
+    fi
+
+    if grep -qF "$marker" "$bashrc" 2>/dev/null; then
+        info "bashrc 已包含 ${CMD_NAME} 配置: ${bashrc}"
+        return 0
+    fi
+
+    local block
+    block=$(cat <<EOF
+
+${marker}
+# 确保 ${CMD_NAME} 所在目录在 PATH 中，便于命令查找与 Tab 补全
+case ":\$PATH:" in
+  *":${bin_dir}:"*) ;;
+  *) export PATH="${bin_dir}:\$PATH" ;;
+esac
+EOF
+)
+
+    if [ -w "$bashrc" ]; then
+        printf '%s\n' "$block" >>"$bashrc"
+    else
+        printf '%s\n' "$block" | sudo tee -a "$bashrc" >/dev/null
+    fi
+    ok "已写入 PATH 到: ${bashrc}"
+}
+
+do_install() {
+    local src dst bashrc scripts_dir scripts_dst
+    src="$(readlink -f "${BASH_SOURCE[0]}")"
+    dst="${INSTALL_BIN_DIR}/${CMD_NAME}"
+    scripts_dir="${INSTALL_BIN_DIR}/scripts"
+    scripts_dst="${scripts_dir}/${CMD_NAME}"
+    bashrc="$(resolve_bashrc)"
+
+    info "安装源: $src"
+    info "安装到: $dst"
+    info "bashrc: $bashrc"
+
+    if [ ! -d "$INSTALL_BIN_DIR" ]; then
+        sudo mkdir -p "$INSTALL_BIN_DIR"
+    fi
+
+    if [ -w "$INSTALL_BIN_DIR" ]; then
+        cp -f "$src" "$dst"
+        chmod +x "$dst"
+    else
+        sudo cp -f "$src" "$dst"
+        sudo chmod +x "$dst"
+    fi
+
+    # 本机若已用 /usr/local/bin/scripts 做 PATH/补全，同步覆盖，避免仍命中旧版
+    if [ -d "$scripts_dir" ]; then
+        info "同步安装到: $scripts_dst"
+        if [ -w "$scripts_dir" ]; then
+            cp -f "$src" "$scripts_dst"
+            chmod +x "$scripts_dst"
+        else
+            sudo cp -f "$src" "$scripts_dst"
+            sudo chmod +x "$scripts_dst"
+        fi
+    fi
+
+    ensure_path_in_bashrc "$bashrc" "$INSTALL_BIN_DIR"
+    if [ "$bashrc" != "${HOME}/.bashrc" ] && [ -n "${HOME:-}" ]; then
+        ensure_path_in_bashrc "${HOME}/.bashrc" "$INSTALL_BIN_DIR"
+    fi
+
+    # 自动 source，无需再手动执行
+    local f _errexit_was_on=0 _sourced_files="|"
+    case "$-" in *e*) _errexit_was_on=1 ;; esac
+    for f in "$bashrc" "${HOME}/.bashrc"; do
+        [ -n "${f:-}" ] && [ -f "$f" ] || continue
+        case "$_sourced_files" in *"|$f|"*) continue ;; esac
+        _sourced_files="${_sourced_files}${f}|"
+        info "自动加载: $f"
+        set +e
+        # shellcheck disable=SC1090,SC1091
+        source "$f"
+        if [ "$_errexit_was_on" -eq 1 ]; then
+            set -e
+        fi
+    done
+    hash -r 2>/dev/null || true
+
+    ok "安装完成"
+    if zju3_is_sourced; then
+        ok "当前终端已生效，可直接使用 ${CMD_NAME}"
+    else
+        echo -e "${YELLOW}若当前终端尚未识别命令，请再执行一次:${NC}"
+        echo -e "  ${YELLOW}source ${src} --install${NC}"
+        echo -e "（推荐安装方式：直接 ${YELLOW}source ${src} --install${NC}）"
+    fi
+}
+
+do_login() {
+    print_step "SSH 登录 ${REMOTE_USER}@${REMOTE_HOST}:${REMOTE_PORT}" \
+        "ssh -p ${REMOTE_PORT} ${REMOTE_USER}@${REMOTE_HOST}"
+    # -t 分配伪终端，保证交互登录
+    sshpass -p "$REMOTE_PASS" ssh -t "${SSH_OPTS[@]}" -p "$REMOTE_PORT" \
+        "${REMOTE_USER}@${REMOTE_HOST}"
+}
+
+do_upload() {
+    local file="$1"
+    local base
+
+    [ -e "$file" ] || die "文件或目录 '$file' 不存在"
+    base="$(basename "$file")"
+
+    print_step "上传 '$file' 到 ${REMOTE_USER}@${REMOTE_HOST}:${REMOTE_UPLOAD_DIR}" \
+        "scp -P ${REMOTE_PORT} ${file} ${REMOTE_USER}@${REMOTE_HOST}:${REMOTE_UPLOAD_DIR}"
+
+    remote_scp "$file" "${REMOTE_USER}@${REMOTE_HOST}:${REMOTE_UPLOAD_DIR}"
+    ok "上传完成: $file -> ${REMOTE_USER}@${REMOTE_HOST}:${REMOTE_UPLOAD_DIR}${base}"
+}
+
+do_download() {
+    local remote_path="$1"
+    local local_path="$2"
+
+    print_step "从远程下载 '$remote_path' 到本地 '$local_path'" \
+        "scp -P ${REMOTE_PORT} ${REMOTE_USER}@${REMOTE_HOST}:${remote_path} ${local_path}"
+
+    remote_scp "${REMOTE_USER}@${REMOTE_HOST}:${remote_path}" "$local_path"
+    ok "下载完成: ${REMOTE_USER}@${REMOTE_HOST}:${remote_path} -> ${local_path}"
+}
+
+print_usage() {
+    local name
+    name="$(basename "$0")"
+    echo -e "${YELLOW}用法:${NC}"
+    echo "  $name                         # SSH 登录远程主机"
+    echo "  $name <local_path>            # 上传文件/目录到远程 ${REMOTE_UPLOAD_DIR}"
+    echo "  $name <remote_path> <local>   # 从远程下载文件/目录到本地"
+    echo "  source $name --install        # 安装到 ${INSTALL_BIN_DIR}，并自动 source 当前终端"
+    echo "  $name -h|--help               # 显示帮助"
+    echo ""
+    echo -e "${BLUE}链路:${NC} 本地 -> ${REMOTE_USER}@${REMOTE_HOST}:${REMOTE_PORT}"
+    echo ""
+    echo -e "${BLUE}示例:${NC}"
+    echo "  $name"
+    echo "  $name ./build.tar.gz"
+    echo "  $name ~/log.txt ./log.txt"
+    echo "  source ./$name --install"
+}
+
+main() {
+    case "${1:-}" in
+        -h|--help)
+            print_usage
+            return 0
+            ;;
+        --install)
+            do_install
+            return 0
+            ;;
+    esac
+
+    check_sshpass
+
+    case "${1:-}" in
+        "")
+            do_login
+            ;;
+        *)
+            if [ "$#" -eq 1 ]; then
+                do_upload "$1"
+            elif [ "$#" -eq 2 ]; then
+                do_download "$1" "$2"
+            else
+                print_usage
+                return 1
+            fi
+            ;;
+    esac
+}
+
+main "$@"
+_zju3_status=$?
+if zju3_is_sourced; then
+    return "${_zju3_status}"
+fi
+exit "${_zju3_status}"

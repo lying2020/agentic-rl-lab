@@ -39,7 +39,19 @@ PDF：仓库副本 [`docs/RetireOPD.pdf`](../../RetireOPD.pdf)（23 页，含附
 
 作者在 ALFWorld + Qwen2.5-3B 上观察到两个现象（论文 Figure 2）：
 
-1. **加了技能的教师不一定更强。** 在 GRPO+OPSD（教师和学生是同一个模型的两个分支）里，带技能的分支并没有稳定地比学生好。直接拿没训练过的 7B 模型加技能提示，ALFWorld 也只有 23.4%（Table 1 的 Skill-Prompt∗）。也就是说，教师要先 **学会用技能**，才有资格教人。
+1. **加了技能的教师不一定更强。** Figure 2 左图的“教师”就是 Qwen2.5-3B-Instruct **自己**，和学生 **同一套权重**，差别只在输入：教师分支看「技能文本 + 任务 prompt + 学生已经生成的前缀」，学生分支只看「任务 prompt + 前缀」。这就是论文说的 GRPO+OPSD：同一个策略的两个分支。附录 Figure 14 的教师模板是在学生 prompt 前加一段 `[Privileged Skill Information] {skill_text}`。
+
+   说“教师没有经过专门训练”时要更精确：这套共享权重 **在训练中会更新**（左图教师曲线大约从 0.27 涨到 0.71），但更新信号全部来自学生分支（学生的 GRPO 奖励加上 OPSD 损失），**没有任何信号奖励“带技能的那个分支把技能用好”**。所以这个教师是“跟着学生一起变强”，不是“学会了怎么用技能”。SkillRL 原文也观察到：把技能直接塞进没改过的模型，收益很有限，所以他们在 RL 之前先做一轮启动 SFT。RetireOPD 的教师则完全不同：先单独用 Skill-GRPO 训练（3B 到 79.7%），再冻结，是另一份独立权重。
+
+   左图读数可以和 Table 1（3B ALFWorld）对上；第 0 步是从图上估的，和表差约 1 个点：
+
+   | Figure 2 左图 | 对应 Table 1（3B） | Table 1 |
+   |---|---|---:|
+   | 第 0 步教师 $\approx 0.277$ | Skill-Prompt∗（原模型 + 技能 prompt） | 28.9 |
+   | 第 0 步学生 $\approx 0.23$ | Vanilla | 21.9 |
+   | 最终学生 $\approx 0.766$ | GRPO+OPSD | 78.1 |
+
+   直接拿没改过的 7B 加技能提示，ALFWorld 也只有 23.4%（Table 1 的 Skill-Prompt∗）。教师要先 **学会用技能**，才有资格教人。
 2. **教师的作用随阶段变化。** GRPO+OPD 解决了纯 GRPO 起步慢、纯 OPD 天花板低的问题。但师生差（teacher–student discrepancy）先缩小、后反弹：学生学会了技能带来的行为之后，奖励优化开始偏向教师之外的动作，两股梯度开始冲突，继续对齐教师会把学生卡在教师的水平附近。
 
 ## 1.3 Motivation
@@ -71,6 +83,35 @@ RetireOPD 的切口：**在整个训练层面在线决定一次“何时退休�
 - **前期教师有用**：任务“清洗生菜再放到台面上”。第 8 步走到水槽边，技能里写着“放之前先清洗”。训练过的技能教师给 `clean` 这个 token 的 log 概率是 **−0.826**，未训练的 OPSD 教师给 **−16.625**。只有前者能真正把技能变成有用的 token 级监督。
 - **后期教师碍事**：任务需要“冷却番茄再用微波炉”。学生走向微波炉的动作最终让任务成功，环境也给了正反馈，但教师对这一步打了很低的分。这时继续对齐教师，等于让学生放弃一个正确的动作。
 
+## 1.6 技能 prompt 到底是什么
+
+技能来自 SkillRL 的 SkillBank，**不是标准答案**。SkillRL 原文的建库过程分四步（RetireOPD 正文只说沿用这个库，细节以 SkillRL 为准）：
+
+1. **收集轨迹。** 先让基座模型在环境里跑，成功和失败的轨迹都留下来。
+2. **提炼技能。** 用 OpenAI o3 作提炼模型。成功轨迹提炼成关键决策点和可迁移模式；失败轨迹被收成“哪里错了、为什么、本来该怎么做”的教训。
+3. **分两层组织。** 一层通用技能，适用于所有任务类型，比如系统性搜索、执行动作前检查前提条件；另一层按任务类别分的专用技能，例如 ALFWorld 里的 clean、heat、cool。
+4. **统一格式。** 每条技能有三个字段：名称、原则、适用条件。SkillRL 初始库约 55 条，其中 12 条通用、43 条专用。
+
+本地 SDAR / RetireOPD 仓不是 55 张独立卡片，而是按任务类型合成的几份 markdown：`skills/alfworld/general_skills.md` 正好 12 条（含 Progressive Goal Decomposition）；`clean.md` 一类里有 “Phase-Ordered Plan / Sink First for Cleaning / State Verification Before Drop” 等。附录 Figure 10 里检索到的技能名，例如 “Clean before placing”“Use sink for cleaning”“Verify object state”，对应的就是这类策略。
+
+**RetireOPD 怎么取技能：** 沿用 SDAR 的关键词匹配。从任务描述里识别类别（例如出现 `clean`），再取出通用技能 + 该类专用技能。SDAR 原文对比过 UCB、关键词、全量、随机四种检索，RetireOPD 固定用关键词。代码里对 ALFWorld parquet 是 `any` 匹配：多个关键词命中时会把多份技能拼在一起，不只取一类。
+
+拼进教师 prompt 后大致是这样（按 SkillRL 字段和 Figure 10 的技能名写的示意，不是论文原文）：
+
+```text
+[Privileged Skill Information]
+- Clean before placing
+  原则：clean 类任务，拿到目标物先去水槽清洗，再放到目标位置
+  适用：任务描述形如 "clean some X and put it in Y"
+- Verify object state
+  ...
+You are an expert agent operating in the ALFRED Embodied Environment.
+Your task is to: clean some lettuce and put it in countertop.
+...
+```
+
+关键区别：**技能 $\neq$ 答案。** 它告诉教师“先洗再放”，不把 `clean lettuce 2 with sinkbasin 1` 这种具体动作写死。学生从头到尾看不到这段文本。
+
 ---
 
 # 2. 方法论树状拆解
@@ -90,7 +131,8 @@ RetireOPD 的切口：**在整个训练层面在线决定一次“何时退休�
 ```text
 RetireOPD
 |-- 阶段 1：特权教师构造
-|   |-- 同尺寸、同初始化的模型，上下文加技能文本 c+
+|   |-- 同尺寸、同初始化的模型，上下文加技能文本 c+（独立权重，不是 GRPO+OPSD 的共享分支）
+|   |-- c+ 来自 SkillRL SkillBank：通用 12 条 + 按任务类型的专用技能，关键词检索
 |   |-- 用 GRPO + 环境奖励训练（即 Skill-GRPO，150 步，同 GRPO 超参）
 |   |-- 按验证集选 checkpoint，冻结为 pi_T
 |   `-- 记录教师验证成功率 SR_T，作为退休判据的分母
@@ -261,7 +303,7 @@ $$
 | 项 | 内容 |
 |---|---|
 | 模型 | Qwen2.5-1.5B / 3B / 7B-Instruct，教师与学生同尺寸、同初始化 |
-| 技能 | SkillRL 的 SkillBank，沿用 SDAR 的关键词匹配检索 |
+| 技能 | SkillRL 的 SkillBank（约 55 条：12 通用 + 43 专用；本地仓按任务类型合成 markdown）。沿用 SDAR 关键词匹配；SDAR 还对比过 UCB / 全量 / 随机，本文不用 |
 | ALFWorld | 6 类任务；成功率；验证集 128 条 |
 | WebShop | Score 与 Acc；验证集 256 条 |
 | 评测 | 论文没有单独写测试集。官方 ALFWorld 脚本把 `data.val_files` 指向 `test.parquet`，`val_data_size=128`；主表的 ALFWorld 数字基本都能被 128 整除，例如 93.8 = 120/128 |
@@ -273,8 +315,8 @@ $$
 | 提示 | Vanilla、Skill-Prompt∗ | ∗ 表示评测时也给技能 |
 | RL | GRPO、GiGPO、PPO、RLOO | 标准 RL |
 | RL + 技能 | Skill-GRPO∗ | **就是本文阶段 1 训练出的教师**，评测时带技能 |
-| 蒸馏 | OPD-Skill-同尺寸、OPD-更大模型、OPSD | 后缀表示教师。“OPD-3B”是用未训练的 3B 模型加技能当 1.5B 学生的教师 |
-| 混合 | GRPO+OPD、GRPO+OPSD（即 SDAR 设定） | 固定 λ，不退休 |
+| 蒸馏 | OPD-Skill-同尺寸、OPD-更大模型、OPSD | 后缀表示教师。“OPD-3B”是用 **没做过 Skill-GRPO** 的 3B 加技能，当 1.5B 学生的教师 |
+| 混合 | GRPO+OPD、GRPO+OPSD（即 SDAR 设定） | 固定 λ，不退休。GRPO+OPSD 的教师是 **共享权重的技能分支**，不是阶段 1 那种独立教师 |
 
 **【注解 · baseline 数字和 ALIGNOPSD 论文完全一样】** 3B 与 7B 的 Vanilla、GRPO、OPSD 行，每一格都和 ALIGNOPSD（北航）论文 Table 1 相同，只是 ALFWorld 列顺序不同。两篇很可能都沿用了 SDAR 论文的数字 [推断]。另外，1.5B 和 7B 的 GRPO / GiGPO / PPO / RLOO 等多个数字不能被 128 或 256 整除，说明这些 baseline 可能不是用同一套 128 / 256 条评测跑出来的 [推断]。
 
@@ -336,7 +378,7 @@ WebShop Score：RetireOPD 为 86.6 / 85.8 / 91.7；GRPO+OPD 为 82.5 / 84.5 / 90
 
 **支撑：**
 
-- 强：OPSD（教师未训练）在三个尺寸上都崩掉（ALFWorld 14–33），换成训练过的技能教师后，OPD 就能到 71–87。“教师要先训练”这一点证据最充分。
+- 强：OPSD（教师只是共享权重加技能，没有单独的 Skill-GRPO）在三个尺寸上都崩掉（ALFWorld 14–33），换成先 Skill-GRPO 再冻结的教师后，OPD 就能到 71–87。“教师要先学会用技能”这一点证据最充分。
 - 强：“学生超过自己的教师”在 6 个设置里都成立，ALFWorld 3B 从 79.7 涨到 93.8。纯 OPD 学生则基本停在教师附近，甚至低于教师。
 - 中：相对 GRPO+OPD（不退休的同一配方），3B ALFWorld 高 11.0 个点；但 1.5B 只高 2.3（约 3 个 episode）、7B 只高 3.1（约 4 个 episode）。**退休机制的大收益主要集中在 3B**，而所有消融恰恰都只在 3B ALFWorld 上做。
 - 弱：相对最强的纯 RL baseline GiGPO，3B ALFWorld 只高 1.6 个点（约 2 个 episode）。
@@ -357,10 +399,10 @@ WebShop Score：RetireOPD 为 86.6 / 85.8 / 91.7；GRPO+OPD 为 82.5 / 84.5 / 90
 
 | 教师 | 教师自身 | 用 RetireOPD 训出的学生 |
 |---|---:|---:|
-| 3B 未训练（只加技能提示） | 28.9 | 78.1 |
-| 3B 训练过 | 79.7 | **93.8** |
-| 7B 未训练 | 23.4 | 86.7 |
-| 7B 训练过 | 90.6 | 91.4 |
+| 3B 只加技能、无 Skill-GRPO（= Skill-Prompt∗） | 28.9 | 78.1 |
+| 3B 先 Skill-GRPO 再冻结 | 79.7 | **93.8** |
+| 7B 只加技能、无 Skill-GRPO | 23.4 | 86.7 |
+| 7B 先 Skill-GRPO 再冻结 | 90.6 | 91.4 |
 
 - 强：训练过的教师明显更好（3B：78.1 → 93.8）。
 - 有意思：训练过的 7B 教师（自身 90.6）教出来的学生（91.4），**不如** 训练过的 3B 教师（自身 79.7）教出来的学生（93.8）。论文没有讨论这一点；它提示“教师越强越好”并不成立，师生同尺寸可能更容易对齐 [推断]。
@@ -406,7 +448,7 @@ WebShop Score：RetireOPD 为 86.6 / 85.8 / 91.7；GRPO+OPD 为 82.5 / 84.5 / 90
 
 - **ALFWorld**：`alfworld` 数据（`json_2.1.1`，脚本会在 `~/.cache/alfworld` 或 `~/data/alfworld` 下找），用 `examples/data_preprocess/prepare --mode text --train_data_size 16 --val_data_size 128` 生成 parquet。
 - **WebShop**：商品库与搜索服务（verl-agent 的标准 WebShop 环境）。
-- **技能**：关键词匹配检索。完整 submodule 里有 `skills/alfworld/`、`skills/webshop/`、`skills/search/`。WebShop 脚本用 `skills/webshop`。
+- **技能**：SkillRL SkillBank，关键词匹配。完整 submodule 里有 `skills/alfworld/`、`skills/webshop/`、`skills/search/`。ALFWorld 看 `skill_mapping.json`：先拼 `general_skills.md`（12 条），再按 `clean` / `heat` / `cool` 等关键词拼专用文件。WebShop 脚本用 `skills/webshop`。实现在 `verl/trainer/ppo/rlsd_utils.py::SkillProvider`。
 - **评测划分**：建议另外留出一份不参与退休判据和 checkpoint 选择的测试集。
 
 ## 6.2 模型
@@ -469,14 +511,17 @@ TEACHER_MODEL_PATH=/path/to/teacher_hf TEACHER_PERFORMANCE=0.797 \
 
 | 方法 | 教师从哪来 | 开关粒度 | 何时关 | 是否彻底撤掉 |
 |---|---|---|---|---|
-| SDAR / GRPO+OPSD | 同模型加技能（未训练） | token 门控 | 每个 token 在线 | 否 |
+| SDAR / GRPO+OPSD | 同模型加技能（共享权重，无单独 Skill-GRPO） | token 门控 | 每个 token 在线 | 否 |
 | SAGE-OPD | 外部更大教师 | 每轮 0 / 0.5 / 1 | 每轮在线 | 否 |
 | TCOD-F2B | 外部教师 | 轨迹深度 | 预设课程 | 否 |
-| ALIGNOPSD | 同模型加技能（未训练） | 轮权重（只调幅度） | 每轮在线 | 不需要（没有 OPD loss） |
+| ALIGNOPSD | 同模型加技能（共享权重，无单独 Skill-GRPO） | 轮权重（只调幅度） | 每轮在线 | 不需要（没有 OPD loss） |
 | 线性退火（ATOD） | 外部或自教师 | 全局 λ | 预设时间表 | 是（λ 到 0） |
 | **RetireOPD** | **同尺寸，先用 GRPO 训练会用技能** | **全局 λ** | **在线判据，一次性** | **是，且跳过教师前向** |
 
 ## 7.2 组会可追问（预答）
+
+**Q0. Figure 2 左图的教师是谁？技能是标准答案吗？**
+教师就是学生同一套 Qwen2.5-3B 权重，只是多看一段 SkillBank 文本。这段文本是“先洗再放”这类策略，不是 `clean lettuce 2 with sinkbasin 1` 这种标准答案。共享权重要更新，但没有单独奖励教师把技能用好；RetireOPD 的阶段 1 才是另一份用环境奖励训过的独立教师。
 
 **Q1. 自适应退休比“随便挑一个中间步退休”好多少？**
 论文没有做这个对照。Table 2 和 Table 3 里，退休步在 50–100 之间时结果都在 89–94，明显好于不退休的 82.8。所以 **“退休”本身的证据强，“自适应”的证据弱**。最值得补的实验是固定退休步的网格扫描，加多 seed。

@@ -1,0 +1,16 @@
+[Unit]
+Description=Restart Tailscale when this node goes offline
+After=network-online.target tailscaled.service
+Wants=network-online.target tailscaled.service
+
+[Service]
+Type=simple
+ExecStart=/usr/local/sbin/tailscale_watchdog.sh
+Restart=always
+RestartSec=5
+Environment=INTERVAL=30
+Environment=COOLDOWN=90
+Environment=LOG=/var/log/tailscale-watchdog.log
+
+[Install]
+WantedBy=multi-user.target

@@ -2,6 +2,8 @@
 
 方法是两阶段训练。部署 = 不带技能的 Qwen2.5 generate。  
 本地仓：`algorithm/SDAR/`。RetireOPD 没有独立仓库。
+9007（4 × A6000）上的部署方案与行动项：[`DEPLOY_PLAN_9007.md`](DEPLOY_PLAN_9007.md)。  
+2026-10-22 压缩配置训练与测试报告：[`TRAIN_REPORT_9007.md`](TRAIN_REPORT_9007.md)。
 
 ```mermaid
 flowchart LR
@@ -49,7 +51,7 @@ python3 -m examples.data_preprocess.prepare \
 export ALFWORLD_DATA="$HOME/.cache/alfworld"   # 或 $HOME/data/alfworld
 ```
 
-技能文本在 `skills/alfworld/`、`skills/webshop/`、`skills/search/`。WebShop 脚本使用 `skills/webshop`。
+技能文本在 `skills/alfworld/`、`skills/webshop/`、`skills/search/`。ALFWorld 先拼 `general_skills.md`（12 条通用策略），再按任务描述里的 `clean` / `heat` / `cool` 等关键词拼专用文件。WebShop 脚本使用 `skills/webshop`。实现：`verl/trainer/ppo/rlsd_utils.py::SkillProvider`。
 
 ## 4. 推理冒烟
 

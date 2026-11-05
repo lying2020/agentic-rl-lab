@@ -41,6 +41,7 @@ algorithm/SDAR/
 
 | 论文 | Eq. / 节 | 代码 |
 |---|---|---|
+| SkillBank $c^+$ | §3.1、附录 Figure 14 | `skills/{alfworld,webshop,search}/`；检索 `verl/trainer/ppo/rlsd_utils.py::SkillProvider` |
 | 阶段 1 教师 GRPO | Eq. 1 | `examples/skill_grpo_trainer/run_*.sh` |
 | 冻结教师 $\pi_T$ | §3.1 | 阶段 1 checkpoint → `scripts/model_merger.py` → `TEACHER_MODEL_PATH` |
 | $SR_T$ | Eq. 7 分母 | 环境变量 `TEACHER_PERFORMANCE`（**手动填**） |
